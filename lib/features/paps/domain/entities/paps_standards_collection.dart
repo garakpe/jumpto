@@ -1,10 +1,11 @@
 import 'dart:convert';
 
-import 'models/event.dart';
-import 'models/fitness_factor.dart';
-import 'models/gender.dart';
-import 'models/grade.dart';
-import 'models/school_level.dart';
+import 'event.dart';
+import 'fitness_factor.dart';
+import 'gender.dart';
+import 'grade.dart';
+import 'grade_range.dart';
+import 'school_level.dart';
 import 'paps_standard.dart';
 
 /// 팝스 기준표 컬렉션
@@ -45,6 +46,16 @@ class PapsStandardsCollection {
               
               // 등급 범위 목록 파싱
               final List<dynamic> gradeRangesJson = eventData;
+              final List<GradeRange> gradeRanges = [];
+              
+              for (var rangeJson in gradeRangesJson) {
+                gradeRanges.add(GradeRange(
+                  grade: rangeJson['등급'],
+                  score: rangeJson['점수'],
+                  start: (rangeJson['시작'] as num).toDouble(),
+                  end: (rangeJson['종료'] as num).toDouble(),
+                ));
+              }
               
               // PapsStandard 객체 생성 및 추가
               allStandards.add(PapsStandard(
@@ -53,14 +64,7 @@ class PapsStandardsCollection {
                 grade: grade,
                 fitnessFactor: fitnessFactor,
                 event: event,
-                gradeRanges: gradeRangesJson
-                  .map((rangeJson) => GradeRange(
-                    grade: rangeJson['등급'],
-                    score: rangeJson['점수'],
-                    start: rangeJson['시작'].toDouble(),
-                    end: rangeJson['종료'].toDouble(),
-                  ))
-                  .toList(),
+                gradeRanges: gradeRanges,
               ));
             });
           });

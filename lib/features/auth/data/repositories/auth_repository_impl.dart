@@ -17,7 +17,7 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       final user = await _remoteDataSource.getCurrentUser();
       return Right(user);
-    } on Exception catch (e) {
+    } catch (e) {
       return Left(_handleError(e));
     }
   }
@@ -37,7 +37,7 @@ class AuthRepositoryImpl implements AuthRepository {
         schoolId: schoolId,
       );
       return Right(user);
-    } on Exception catch (e) {
+    } catch (e) {
       return Left(_handleError(e));
     }
   }
@@ -59,7 +59,7 @@ class AuthRepositoryImpl implements AuthRepository {
         initialPassword: initialPassword,
       );
       return Right(user);
-    } on Exception catch (e) {
+    } catch (e) {
       return Left(_handleError(e));
     }
   }
@@ -75,7 +75,7 @@ class AuthRepositoryImpl implements AuthRepository {
         password: password,
       );
       return Right(user);
-    } on Exception catch (e) {
+    } catch (e) {
       return Left(_handleError(e));
     }
   }
@@ -93,7 +93,7 @@ class AuthRepositoryImpl implements AuthRepository {
         password: password,
       );
       return Right(user);
-    } on Exception catch (e) {
+    } catch (e) {
       return Left(_handleError(e));
     }
   }
@@ -103,7 +103,7 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       await _remoteDataSource.signOut();
       return const Right(null);
-    } on Exception catch (e) {
+    } catch (e) {
       return Left(_handleError(e));
     }
   }
@@ -113,7 +113,7 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       await _remoteDataSource.sendPasswordResetEmail(email);
       return const Right(null);
-    } on Exception catch (e) {
+    } catch (e) {
       return Left(_handleError(e));
     }
   }
@@ -129,7 +129,7 @@ class AuthRepositoryImpl implements AuthRepository {
         newPassword: newPassword,
       );
       return const Right(null);
-    } on Exception catch (e) {
+    } catch (e) {
       return Left(_handleError(e));
     }
   }
@@ -145,7 +145,7 @@ class AuthRepositoryImpl implements AuthRepository {
         newPassword: newPassword,
       );
       return const Right(null);
-    } on Exception catch (e) {
+    } catch (e) {
       return Left(_handleError(e));
     }
   }
@@ -154,7 +154,7 @@ class AuthRepositoryImpl implements AuthRepository {
   Stream<User?> get authStateChanges => _remoteDataSource.authStateChanges;
   
   /// 오류 처리
-  Failure _handleError(Exception exception) {
+  Failure _handleError(dynamic exception) {
     if (exception is firebase_auth.FirebaseAuthException) {
       return AuthFailure(
         message: _getAuthErrorMessage(exception.code),

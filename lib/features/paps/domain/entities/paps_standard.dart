@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
 
-import 'models/event.dart';
-import 'models/fitness_factor.dart';
-import 'models/gender.dart';
-import 'models/grade.dart';
-import 'models/grade_range.dart';
-import 'models/school_level.dart';
+import 'event.dart';
+import 'fitness_factor.dart';
+import 'gender.dart';
+import 'grade.dart';
+import 'grade_range.dart';
+import 'school_level.dart';
 
 /// 팝스 기준표 엔티티
 ///

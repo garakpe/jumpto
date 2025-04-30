@@ -1,8 +1,8 @@
-import 'models/event.dart';
-import 'models/fitness_factor.dart';
-import 'models/gender.dart';
-import 'models/grade.dart';
-import 'models/school_level.dart';
+import 'event.dart';
+import 'fitness_factor.dart';
+import 'gender.dart';
+import 'grade.dart';
+import 'school_level.dart';
 
 /// 팝스 측정 기록 엔티티
 ///

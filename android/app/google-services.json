@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "515477990903",
+    "project_id": "jumpto-web",
+    "storage_bucket": "jumpto-web.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:515477990903:android:7ab92e1ed9ca6705f792f2",
+        "android_client_info": {
+          "package_name": "com.example.jumpto"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCD5aT3FSaJirsWaaD8ilmuoyE_shk58w8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

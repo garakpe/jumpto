@@ -1,0 +1,55 @@
+{
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "jumpto-web",
+          "appId": "1:515477990903:android:7ab92e1ed9ca6705f792f2",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "jumpto-web",
+          "appId": "1:515477990903:ios:05dca6122562fd07f792f2",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "macos": {
+        "default": {
+          "projectId": "jumpto-web",
+          "appId": "1:515477990903:ios:05dca6122562fd07f792f2",
+          "uploadDebugSymbols": false,
+          "fileOutput": "macos/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "jumpto-web",
+          "configurations": {
+            "android": "1:515477990903:android:7ab92e1ed9ca6705f792f2",
+            "ios": "1:515477990903:ios:05dca6122562fd07f792f2",
+            "macos": "1:515477990903:ios:05dca6122562fd07f792f2",
+            "web": "1:515477990903:web:5f791725de93e3daf792f2",
+            "windows": "1:515477990903:web:86e84a52f1c1cde2f792f2"
+          }
+        }
+      }
+    }
+  }
+}

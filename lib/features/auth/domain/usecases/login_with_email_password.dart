@@ -1,7 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:equatable/equatable.dart';
 
-import '../../../../core/errors/failures.dart';
+import '../../../../core/error/failures.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../entities/user.dart';
 import '../repositories/auth_repository.dart';
@@ -14,9 +14,9 @@ class LoginWithEmailPassword implements UseCase<User, LoginParams> {
 
   @override
   Future<Either<Failure, User>> call(LoginParams params) async {
-    return await repository.loginWithEmailAndPassword(
-      params.email,
-      params.password,
+    return await repository.signInWithEmailPassword(
+      email: params.email,
+      password: params.password,
     );
   }
 }

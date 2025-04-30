@@ -1,44 +1,49 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-
 import '../../domain/entities/user.dart';
-
-part 'user_model.g.dart';
 
 /// User 엔티티의 데이터 모델 구현
 /// Firestore 문서와 도메인 엔티티 사이의 변환을 담당
-@JsonSerializable()
 class UserModel extends User {
-  const UserModel({
-    required String id,
-    required String email,
-    required String role,
-    String? name,
-    bool isApproved = false,
-    int? maxStudents,
-    String? schoolName,
-    String? grade,
-    String? classNumber,
-    String? studentNumber,
-    String? gender,
-  }) : super(
-          id: id,
-          email: email,
-          role: role,
-          name: name,
-          isApproved: isApproved,
-          maxStudents: maxStudents,
-          schoolName: schoolName,
-          grade: grade,
-          classNumber: classNumber,
-          studentNumber: studentNumber,
-          gender: gender,
-        );
+  UserModel({
+    required super.id,
+    super.email,
+    required super.displayName,
+    required super.role,
+    super.schoolId,
+    super.classId,
+    super.studentNumber,
+    super.gender,
+  });
 
   /// Firestore 문서에서 UserModel 객체 생성
-  factory UserModel.fromJson(Map<String, dynamic> json) => _$UserModelFromJson(json);
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    final roleStr = json['role'] as String? ?? 'student';
+    final role = roleStr == 'teacher' ? UserRole.teacher : UserRole.student;
+
+    return UserModel(
+      id: json['id'] as String,
+      email: json['email'] as String?,
+      displayName: json['displayName'] as String? ?? '',
+      role: role,
+      schoolId: json['schoolId'] as String?,
+      classId: json['classId'] as String?,
+      studentNumber: json['studentNumber'] as String?,
+      gender: json['gender'] as String?,
+    );
+  }
 
   /// UserModel 객체를 Firestore 문서로 변환
-  Map<String, dynamic> toJson() => _$UserModelToJson(this);
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'email': email,
+      'displayName': displayName,
+      'role': role == UserRole.teacher ? 'teacher' : 'student',
+      'schoolId': schoolId,
+      'classId': classId,
+      'studentNumber': studentNumber,
+      'gender': gender,
+    };
+  }
 
   /// Firebase Auth User와 추가 정보로부터 UserModel 생성
   factory UserModel.fromFirebaseUser(
@@ -46,16 +51,16 @@ class UserModel extends User {
     String email, {
     required Map<String, dynamic> userData,
   }) {
+    final roleStr = userData['role'] as String? ?? 'student';
+    final role = roleStr == 'teacher' ? UserRole.teacher : UserRole.student;
+
     return UserModel(
       id: userId,
       email: email,
-      role: userData['role'] as String? ?? 'student',
-      name: userData['name'] as String?,
-      isApproved: userData['isApproved'] as bool? ?? false,
-      maxStudents: userData['maxStudents'] as int?,
-      schoolName: userData['schoolName'] as String?,
-      grade: userData['grade'] as String?,
-      classNumber: userData['classNumber'] as String?,
+      role: role,
+      displayName: userData['displayName'] as String? ?? '',
+      schoolId: userData['schoolId'] as String?,
+      classId: userData['classId'] as String?,
       studentNumber: userData['studentNumber'] as String?,
       gender: userData['gender'] as String?,
     );
@@ -66,13 +71,10 @@ class UserModel extends User {
     return UserModel(
       id: user.id,
       email: user.email,
+      displayName: user.displayName,
       role: user.role,
-      name: user.name,
-      isApproved: user.isApproved,
-      maxStudents: user.maxStudents,
-      schoolName: user.schoolName,
-      grade: user.grade,
-      classNumber: user.classNumber,
+      schoolId: user.schoolId,
+      classId: user.classId,
       studentNumber: user.studentNumber,
       gender: user.gender,
     );

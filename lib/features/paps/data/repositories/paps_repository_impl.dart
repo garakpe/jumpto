@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 
+import '../../../../core/error/failures.dart';
 import '../../domain/entities/index.dart';
 import '../../domain/repositories/paps_repository.dart';
 import '../datasources/paps_local_data_source.dart';
@@ -14,17 +15,17 @@ class PapsRepositoryImpl implements PapsRepository {
   PapsRepositoryImpl(this._localDataSource, this._remoteDataSource);
 
   @override
-  Future<Either<Exception, PapsStandardsCollection>> getAllPapsStandards() async {
+  Future<Either<Failure, PapsStandardsCollection>> getAllPapsStandards() async {
     try {
       final standards = await _localDataSource.getPapsStandards();
       return Right(standards);
-    } on Exception catch (e) {
-      return Left(e);
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
     }
   }
 
   @override
-  Future<Either<Exception, PapsStandard?>> getPapsStandard({
+  Future<Either<Failure, PapsStandard?>> getPapsStandard({
     required SchoolLevel schoolLevel,
     required int gradeNumber,
     required Gender gender,
@@ -43,33 +44,33 @@ class PapsRepositoryImpl implements PapsRepository {
       );
       
       return Right(standard);
-    } on Exception catch (e) {
-      return Left(e);
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
     }
   }
 
   @override
-  Future<Either<Exception, PapsRecord>> savePapsRecord(PapsRecord record) async {
+  Future<Either<Failure, PapsRecord>> savePapsRecord(PapsRecord record) async {
     try {
       final savedRecord = await _remoteDataSource.savePapsRecord(record);
       return Right(savedRecord);
-    } on Exception catch (e) {
-      return Left(e);
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
     }
   }
 
   @override
-  Future<Either<Exception, List<PapsRecord>>> getStudentPapsRecords(String studentId) async {
+  Future<Either<Failure, List<PapsRecord>>> getStudentPapsRecords(String studentId) async {
     try {
       final records = await _remoteDataSource.getStudentPapsRecords(studentId);
       return Right(records);
-    } on Exception catch (e) {
-      return Left(e);
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
     }
   }
 
   @override
-  Future<Either<Exception, PapsRecord?>> getLatestStudentPapsRecord({
+  Future<Either<Failure, PapsRecord?>> getLatestStudentPapsRecord({
     required String studentId,
     required FitnessFactor fitnessFactor,
   }) async {
@@ -84,13 +85,13 @@ class PapsRepositoryImpl implements PapsRepository {
       
       // 최신 기록 반환 (없으면 null)
       return Right(filteredRecords.isEmpty ? null : filteredRecords.first);
-    } on Exception catch (e) {
-      return Left(e);
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
     }
   }
 
   @override
-  Future<Either<Exception, Map<String, List<PapsRecord>>>> getClassPapsRecords({
+  Future<Either<Failure, Map<String, List<PapsRecord>>>> getClassPapsRecords({
     required String teacherId,
     required String className,
   }) async {
@@ -101,8 +102,8 @@ class PapsRepositoryImpl implements PapsRepository {
       );
       
       return Right(records);
-    } on Exception catch (e) {
-      return Left(e);
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
     }
   }
 }

@@ -1,13 +1,21 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'core/firebase/firebase_initializer.dart';
+import 'core/presentation/theme/app_theme.dart';
+import 'core/routes/app_router.dart';
+import 'features/auth/presentation/cubit/auth_cubit.dart';
+import 'features/paps/presentation/cubit/paps_cubit.dart';
+import 'firebase_options.dart';
 import 'injection_container.dart' as di;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Firebase 초기화
-  await FirebaseInitializer.initialize();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   
   // 의존성 주입 초기화
   await di.initializeDependencies();
@@ -15,56 +23,37 @@ void main() async {
   runApp(const MyApp());
 }
 
+/// 앱의 루트 위젯
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: '온라인 팝스',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
-      home: const SplashScreen(),
-    );
-  }
-}
-
-class SplashScreen extends StatelessWidget {
-  const SplashScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              'assets/logo.png',
-              width: 150,
-              height: 150,
-              errorBuilder: (context, error, stackTrace) => 
-                  const Icon(Icons.fitness_center, size: 100),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              '온라인 팝스 교육 플랫폼',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              '학생건강체력평가 관리 시스템',
-              style: TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 32),
-            const CircularProgressIndicator(),
-          ],
+    return MultiBlocProvider(
+      providers: [
+        // 인증 Cubit 제공
+        BlocProvider<AuthCubit>(
+          create: (context) => AuthCubit(
+            signInWithEmailPassword: di.sl(),
+            getCurrentUser: di.sl(),
+            registerTeacher: di.sl(),
+          ),
         ),
+        // 팝스 Cubit 제공
+        BlocProvider<PapsCubit>(
+          create: (context) => PapsCubit(
+            getPapsStandards: di.sl(),
+            calculatePapsGrade: di.sl(),
+            savePapsRecord: di.sl(),
+            getStudentPapsRecords: di.sl(),
+          ),
+        ),
+      ],
+      child: MaterialApp.router(
+        title: '온라인 팝스',
+        theme: AppTheme.lightTheme,
+        routerConfig: AppRouter.router,
+        debugShowCheckedModeBanner: false,
       ),
     );
   }

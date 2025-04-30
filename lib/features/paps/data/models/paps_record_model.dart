@@ -1,4 +1,11 @@
-import '../../domain/entities/index.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../../domain/entities/event.dart';
+import '../../domain/entities/fitness_factor.dart';
+import '../../domain/entities/gender.dart';
+import '../../domain/entities/grade.dart';
+import '../../domain/entities/paps_record.dart';
+import '../../domain/entities/school_level.dart';
 
 /// 팝스 측정 기록 모델
 ///
