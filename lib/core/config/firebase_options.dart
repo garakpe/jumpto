@@ -6,12 +6,12 @@ class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     // 웹 플랫폼용 설정
     return const FirebaseOptions(
-      apiKey: 'YOUR_API_KEY', // Firebase 콘솔에서 가져온 값으로 교체 필요
-      appId: 'YOUR_APP_ID', // Firebase 콘솔에서 가져온 값으로 교체 필요
-      messagingSenderId: 'YOUR_MESSAGING_SENDER_ID', // Firebase 콘솔에서 가져온 값으로 교체 필요
-      projectId: 'YOUR_PROJECT_ID', // Firebase 콘솔에서 가져온 값으로 교체 필요
-      authDomain: 'YOUR_AUTH_DOMAIN', // Firebase 콘솔에서 가져온 값으로 교체 필요
-      storageBucket: 'YOUR_STORAGE_BUCKET', // Firebase 콘솔에서 가져온 값으로 교체 필요
+      apiKey: "AIzaSyBlcpprW4AokEkqOyim8VpvT5wTJ4OEsD8",
+      authDomain: "jumpto-web.firebaseapp.com",
+      projectId: "jumpto-web",
+      storageBucket: "jumpto-web.firebasestorage.app",
+      messagingSenderId: "515477990903",
+      appId: "1:515477990903:web:5f791725de93e3daf792f2",
     );
   }
 }

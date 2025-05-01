@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get_it/get_it.dart';
 
 import 'core/firebase/firebase_auth_service.dart';
+import 'core/firebase/firebase_data_seed.dart';
 import 'core/firebase/firebase_firestore_service.dart';
 import 'core/usecases/usecase.dart';
 import 'features/auth/data/datasources/auth_remote_data_source.dart';
@@ -11,6 +12,7 @@ import 'features/auth/domain/repositories/auth_repository.dart';
 import 'features/auth/domain/usecases/get_current_user.dart';
 import 'features/auth/domain/usecases/register_teacher.dart';
 import 'features/auth/domain/usecases/sign_in_with_email_password.dart';
+import 'features/auth/domain/usecases/sign_in_student.dart';
 import 'features/paps/data/datasources/paps_local_data_source.dart';
 import 'features/paps/data/datasources/paps_remote_data_source.dart';
 import 'features/paps/data/repositories/paps_repository_impl.dart';
@@ -33,6 +35,7 @@ Future<void> initializeDependencies() async {
   // Firebase 서비스
   sl.registerLazySingleton<FirebaseAuthService>(() => FirebaseAuthService());
   sl.registerLazySingleton<FirebaseFirestoreService>(() => FirebaseFirestoreService());
+  sl.registerLazySingleton<FirebaseDataSeed>(() => FirebaseDataSeed(sl(), sl()));
   
   // Data sources
   sl.registerLazySingleton<PapsLocalDataSource>(
@@ -77,6 +80,9 @@ Future<void> initializeDependencies() async {
   );
   sl.registerLazySingleton<RegisterTeacher>(
     () => RegisterTeacher(sl()),
+  );
+  sl.registerLazySingleton<SignInStudent>(
+    () => SignInStudent(sl()),
   );
   
   // NoParams 인스턴스

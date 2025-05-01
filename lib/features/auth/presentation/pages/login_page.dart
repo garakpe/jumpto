@@ -244,18 +244,10 @@ class _LoginPageState extends State<LoginPage> {
   // 학생 로그인 처리
   void _onStudentLogin() {
     if (_formKey.currentState!.validate()) {
-      // 학생 로그인 기능 구현 예정
-      // context.read<AuthCubit>().signInStudent(
-      //   schoolId: _schoolIdController.text.trim(),
-      //   studentNumber: _studentNumberController.text.trim(),
-      //   password: _passwordController.text,
-      // );
-      
-      // 현재는 교사 로그인과 동일한 방식으로 처리
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('학생 로그인 기능은 아직 구현 중입니다.'),
-        ),
+      context.read<AuthCubit>().signInStudent(
+        schoolId: _schoolIdController.text.trim(),
+        studentNumber: _studentNumberController.text.trim(),
+        password: _passwordController.text,
       );
     }
   }

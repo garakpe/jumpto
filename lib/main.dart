@@ -2,6 +2,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'core/firebase/firebase_data_seed.dart';
+
 import 'core/presentation/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
 import 'features/auth/presentation/cubit/auth_cubit.dart';
@@ -20,6 +22,9 @@ void main() async {
   // 의존성 주입 초기화
   await di.initializeDependencies();
   
+  // 테스트 데이터 시드 실행
+  await di.sl<FirebaseDataSeed>().seedTestData();
+  
   runApp(const MyApp());
 }
 
@@ -37,6 +42,7 @@ class MyApp extends StatelessWidget {
             signInWithEmailPassword: di.sl(),
             getCurrentUser: di.sl(),
             registerTeacher: di.sl(),
+            signInStudent: di.sl(),
           ),
         ),
         // 팝스 Cubit 제공

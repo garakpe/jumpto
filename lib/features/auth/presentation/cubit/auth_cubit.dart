@@ -10,6 +10,7 @@ import '../../domain/entities/user.dart';
 import '../../domain/usecases/get_current_user.dart';
 import '../../domain/usecases/register_teacher.dart';
 import '../../domain/usecases/sign_in_with_email_password.dart';
+import '../../domain/usecases/sign_in_student.dart';
 
 // Auth 상태
 abstract class AuthState extends Equatable {
@@ -51,6 +52,7 @@ class AuthCubit extends Cubit<AuthState> {
   final SignInWithEmailPassword _signInWithEmailPassword;
   final GetCurrentUser _getCurrentUser;
   final RegisterTeacher _registerTeacher;
+  final SignInStudent _signInStudent;
   
   // 인증 상태 스트림 구독
   StreamSubscription? _authStateSubscription;
@@ -59,9 +61,11 @@ class AuthCubit extends Cubit<AuthState> {
     required SignInWithEmailPassword signInWithEmailPassword,
     required GetCurrentUser getCurrentUser,
     required RegisterTeacher registerTeacher,
+    required SignInStudent signInStudent,
   }) : _signInWithEmailPassword = signInWithEmailPassword,
        _getCurrentUser = getCurrentUser,
        _registerTeacher = registerTeacher,
+       _signInStudent = signInStudent,
        super(AuthInitial()) {
     checkAuthState();
   }
@@ -141,6 +145,34 @@ class AuthCubit extends Cubit<AuthState> {
     );
   }
   
+  /// 학생 로그인
+  Future<void> signInStudent({
+    required String schoolId,
+    required String studentNumber,
+    required String password,
+  }) async {
+    emit(AuthLoading());
+    
+    final result = await _signInStudent(
+      SignInStudentParams(
+        schoolId: schoolId,
+        studentNumber: studentNumber,
+        password: password,
+      ),
+    );
+    
+    result.fold(
+      (failure) {
+        emit(AuthError(_mapFailureToMessage(failure)));
+        emit(AuthUnauthenticated());
+      },
+      (user) {
+        AppRouter.setCurrentUser(user);
+        emit(AuthAuthenticated(user));
+      },
+    );
+  }
+
   /// 로그아웃
   Future<void> signOut() async {
     emit(AuthLoading());
