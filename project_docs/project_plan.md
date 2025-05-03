@@ -78,6 +78,7 @@
   - GoRouter를 사용한 앱 라우팅 설정
   - 인증 상태에 따른 리디렉션 처리
 - 코드 구조 개선 및 경로 수정
+
   - `models` 폴더에서 `entities` 폴더로 파일 이동 및 경로 수정
   - import 경로 일관성 확보
   - 타입 안전성(type safety) 개선
@@ -111,10 +112,12 @@
 ### 테스트 계정 정보
 
 **교사 계정:**
+
 - 이메일: teacher@test.com
 - 비밀번호: teacher123
 
 **학생 계정:**
+
 - 이메일: student1@school.com (직접 사용할 필요 없음)
 - 학교 코드: school1
 - 학번: 1

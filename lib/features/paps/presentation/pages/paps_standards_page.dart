@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:developer' as developer;
 
 import '../../../../core/presentation/widgets/error_view.dart';
 import '../../../../core/presentation/widgets/loading_view.dart';
@@ -30,7 +31,10 @@ class _PapsStandardsPageState extends State<PapsStandardsPage> {
   void initState() {
     super.initState();
     _loadEventNames();
-    _loadPapsStandard();
+    // 화면 로드 시 지연을 주어 기준표를 로드하도록 함
+    Future.delayed(Duration.zero, () {
+      _loadPapsStandard();
+    });
   }
   
   // 선택된 체력요인에 따른 이벤트 목록 로드
@@ -44,6 +48,7 @@ class _PapsStandardsPageState extends State<PapsStandardsPage> {
   
   // 팝스 기준표 로드
   void _loadPapsStandard() {
+    developer.log('팝스 기준표 로드 시도: ${_selectedSchoolLevel.koreanName} ${_selectedGradeNumber}학년 ${_selectedGender.koreanName} ${_selectedFitnessFactor.koreanName} ${_selectedEventName}');
     context.read<PapsCubit>().loadPapsStandard(
       schoolLevel: _selectedSchoolLevel,
       gradeNumber: _selectedGradeNumber,
@@ -68,6 +73,7 @@ class _PapsStandardsPageState extends State<PapsStandardsPage> {
           Expanded(
             child: BlocBuilder<PapsCubit, PapsState>(
               builder: (context, state) {
+                developer.log('팝스 기준표 상태: ${state.runtimeType}');
                 if (state is PapsLoading) {
                   return const LoadingView(message: '기준표를 불러오는 중...');
                 }
@@ -83,7 +89,13 @@ class _PapsStandardsPageState extends State<PapsStandardsPage> {
                   return _buildStandardsContent(state.standard);
                 }
                 
-                return const SizedBox.shrink();
+                // 기본적으로 다시 로드를 시도하도록 함
+                Future.delayed(Duration.zero, () {
+                  _loadPapsStandard();
+                });
+                return const Center(
+                  child: Text('기준표를 불러오는 중...\n잠시만 기다려주세요.'),
+                );
               },
             ),
           ),
