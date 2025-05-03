@@ -1,0 +1,224 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+
+/// 디버그 콘솔 - 앱 내에 로그를 표시하기 위한 위젯
+class DebugConsole extends StatefulWidget {
+  final Widget child;
+  final bool showInReleaseMode;
+
+  const DebugConsole({
+    super.key,
+    required this.child,
+    this.showInReleaseMode = false,
+  });
+
+  @override
+  State<DebugConsole> createState() => _DebugConsoleState();
+
+  /// 디버그 콘솔에 로그 메시지 추가
+  static void log(String message) {
+    _DebugConsoleState.logs.add(LogMessage(
+      message: message,
+      timestamp: DateTime.now(),
+    ));
+    _notifyListeners();
+  }
+
+  /// 오류 메시지 추가
+  static void error(String message, [dynamic error]) {
+    _DebugConsoleState.logs.add(LogMessage(
+      message: message,
+      error: error?.toString(),
+      isError: true,
+      timestamp: DateTime.now(),
+    ));
+    _notifyListeners();
+  }
+
+  /// 모든 로그 지우기
+  static void clear() {
+    _DebugConsoleState.logs.clear();
+    _notifyListeners();
+  }
+
+  /// 로그 업데이트를 알리기 위한 내부 메서드
+  static void _notifyListeners() {
+    for (final listener in _DebugConsoleState._listeners) {
+      listener();
+    }
+  }
+}
+
+class _DebugConsoleState extends State<DebugConsole> {
+  // 로그 메시지 저장 리스트
+  static List<LogMessage> logs = [];
+  
+  // 리스너 목록
+  static final List<VoidCallback> _listeners = [];
+  
+  // 콘솔 표시 여부
+  bool _showConsole = false;
+  
+  // 콘솔 높이
+  double _consoleHeight = 200;
+  
+  // 스크롤 컨트롤러
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _listeners.add(_onLogsChanged);
+  }
+
+  @override
+  void dispose() {
+    _listeners.remove(_onLogsChanged);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  // 로그가 변경되면 UI 업데이트
+  void _onLogsChanged() {
+    if (mounted) {
+      setState(() {
+        // 스크롤을 최하단으로 이동
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 릴리즈 모드에서 표시하지 않음 (showInReleaseMode가 false인 경우)
+    if (!kDebugMode && !widget.showInReleaseMode) {
+      return widget.child;
+    }
+
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Stack(
+        children: [
+          // 메인 콘텐츠
+          widget.child,
+        
+        // 디버그 콘솔
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: Column(
+            children: [
+              // 콘솔 토글 버튼
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _showConsole = !_showConsole;
+                  });
+                },
+                child: Container(
+                  width: double.infinity,
+                  height: 24,
+                  color: Colors.black87,
+                  child: Center(
+                    child: Text(
+                      _showConsole ? '디버그 콘솔 숨기기' : '디버그 콘솔 보기',
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ),
+                ),
+              ),
+              
+              // 콘솔 내용
+              if (_showConsole)
+                GestureDetector(
+                  // 콘솔 높이 조절
+                  onVerticalDragUpdate: (details) {
+                    setState(() {
+                      _consoleHeight = (_consoleHeight - details.delta.dy)
+                          .clamp(100.0, 400.0);
+                    });
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    height: _consoleHeight,
+                    color: Colors.black87,
+                    child: Column(
+                      children: [
+                        // 콘솔 도구 모음
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.clear, color: Colors.white, size: 16),
+                              onPressed: () {
+                                DebugConsole.clear();
+                              },
+                              tooltip: '로그 지우기',
+                            ),
+                            const Spacer(),
+                            const Text(
+                              '← 드래그하여 크기 조절 →',
+                              style: TextStyle(color: Colors.white60, fontSize: 10),
+                            ),
+                            const Spacer(),
+                          ],
+                        ),
+                        
+                        // 로그 목록
+                        Expanded(
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            itemCount: logs.length,
+                            itemBuilder: (context, index) {
+                              final log = logs[index];
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8.0,
+                                  vertical: 2.0,
+                                ),
+                                child: Text(
+                                  '${log.timestamp.hour}:${log.timestamp.minute}:${log.timestamp.second} - ${log.message}${log.error != null ? '\n오류: ${log.error}' : ''}',
+                                  style: TextStyle(
+                                    color: log.isError ? Colors.red : Colors.white,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 로그 메시지 모델
+class LogMessage {
+  final String message;
+  final String? error;
+  final bool isError;
+  final DateTime timestamp;
+
+  LogMessage({
+    required this.message,
+    this.error,
+    this.isError = false,
+    required this.timestamp,
+  });
+}
