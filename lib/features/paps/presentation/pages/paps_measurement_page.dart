@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
+import 'dart:developer' as developer;
 
 import '../../../../core/presentation/widgets/app_button.dart';
 import '../../../../core/presentation/widgets/app_text_field.dart';
@@ -69,6 +70,8 @@ class _PapsMeasurementPageState extends State<PapsMeasurementPage> {
       // 측정값 가져오기
       final value = double.parse(_valueController.text);
       
+      developer.log('등급/점수 계산 시도: ${_selectedSchoolLevel.koreanName} ${_selectedGradeNumber}학년 ${_selectedGender.koreanName} ${_selectedFitnessFactor.koreanName} ${_selectedEventName} = $value');
+      
       // 등급과 점수 계산 요청
       context.read<PapsCubit>().calculateGradeAndScore(
         schoolLevel: _selectedSchoolLevel,
@@ -134,12 +137,15 @@ class _PapsMeasurementPageState extends State<PapsMeasurementPage> {
       ),
       body: BlocConsumer<PapsCubit, PapsState>(
         listener: (context, state) {
+          developer.log('팝스 측정 상태 변경: ${state.runtimeType}');
+          
           if (state is PapsMeasurementCalculated) {
             // 등급과 점수 설정
             setState(() {
               _grade = state.grade;
               _score = state.score;
             });
+            developer.log('계산 결과: 등급 $_grade, 점수 $_score');
           } else if (state is PapsRecordSaved) {
             // 저장 성공 메시지
             ScaffoldMessenger.of(context).showSnackBar(
@@ -157,6 +163,7 @@ class _PapsMeasurementPageState extends State<PapsMeasurementPage> {
             });
           } else if (state is PapsError) {
             // 오류 메시지
+            developer.log('오류 발생: ${state.message}');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
