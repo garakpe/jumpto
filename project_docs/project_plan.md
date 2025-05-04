@@ -16,6 +16,13 @@
 
 ### 완료된 작업
 
+- 콘텐츠 선택 화면 구현
+  - ContentSelectionPage 생성
+  - ContentCard 위젯 구현
+  - 라우팅 수정 (로그인 후 콘텐츠 선택 화면으로 이동)
+- 인증 후 라우팅 경로 수정
+  - LoginPage 및 RegisterPage에서 인증 성공 후 '/home' 대신 '/content-selection'으로 이동하도록 수정
+
 - 프로젝트 초기 설정
 - project_plan.md 파일 생성
 - papsData.js 및 paps-converter.js 분석
@@ -45,10 +52,12 @@
   - User 엔티티 구현
   - AuthRepository 인터페이스 구현
   - AuthRemoteDataSource 구현 (Firebase Authentication 연동)
+  - AuthLocalDataSource 구현 (SharedPreferences 활용) ✅
   - AuthRepositoryImpl 구현체 개발
   - SignInWithEmailPassword 유스케이스 구현
   - GetCurrentUser 유스케이스 구현
   - RegisterTeacher 유스케이스 구현
+  - SignOut 유스케이스 구현 ✅
 - Firebase 연동 설정
   - FirebaseInitializer 구현
   - 의존성 주입 설정 (GetIt 이용)
@@ -87,23 +96,47 @@
   - firebase.json 파일 구성
   - 웹 앱 빌드 및 배포
 
+- 교사용 대시보드 개발
+  - 교사 설정 엔티티 및 모델 구현
+  - 교사 설정 Repository 인터페이스 및 구현체 개발
+  - 교사 설정 관련 유스케이스 구현
+  - TeacherSettingsCubit 구현
+  - 교사용 대시보드 UI 구현 (탭 형식)
+    - 종목 선택 탭 구현
+    - 출석부, 측정결과조회, 평가, 되돌아보기 탭 기본 구조 구현
+
 ### 현재 진행 중인 작업
 
 - Firebase Authentication 설정 (이메일/비밀번호 인증 활성화) ✅
 - Firestore 데이터베이스 보안 규칙 설정
 - 학생용 로그인 구현 완성 ✅
 - 테스트용 계정 생성 및 디버깅 ✅
+- 교사용 대시보드 개발 진행 중 ✅
+  - 교사용 대시보드 UI 디자인 ✅
+  - 콘텐츠 선택 화면에서 교사용 대시보드로 연결 ✅
+  - 종목 선택 탭 구현 ✅
+  - 나머지 탭 (출석부, 측정결과조회, 평가, 되돌아보기) 상세 기능 구현
 
 ### 다음 예정 작업
+
+- 교사용 대시보드 나머지 탭 상세 기능 구현
+  - 출석부 탭 기능 구현
+  - 측정결과조회 탭 기능 구현
+  - 평가 탭 기능 구현
+  - 되돌아보기 탭 기능 구현
+- 학생 측정 결과 데이터 모델 및 저장소 구현
+- Firebase Firestore 데이터 구조 최적화
+- 성능 개선 및 오류 처리 강화
 
 ### 발생한 문제점
 
 - 앱 실행 시 사용자 데이터 시드 설정 필요 ✅
 - 자동 코드 생성 대신 직접 변환 로직 구현 필요 (Freezed, JsonSerializable 사용시 오류)
-- 타입 불일치 문제 (Failure vs Exception)
+- 타입 불일치 문제 (Failure vs Exception) ✅
 - import 경로 불일치 및 모델-엔티티 구조 일관성 부재
 - 웹 배포 환경에서 에셋 파일(paps_standards.json) 로드 문제 ✅
 - 웹 환경에서 팝스 측정 기능 작동 안 함 ✅
+- 로그인 후 라우팅 문제: LoginPage와 RegisterPage에서 인증 성공 후 '/content-selection'으로 이동해야 하는데 '/home'으로 직접 이동하는 문제 ✅
 
 ### 새로 추가된 내용
 
@@ -120,6 +153,18 @@
   - 폴백 데이터 메커니즘 구현
   - 디버깅 로그 추가
 - 빌드 및 배포 스크립트(build_and_deploy.sh) 추가
+- 교사용 대시보드 추가 ✅
+  - TeacherSettings 엔티티 및 모델 구현 ✅
+  - TeacherSettingsRepository 인터페이스 및 구현체 개발 ✅
+  - GetTeacherSettings, SaveTeacherSettings 유스케이스 구현 ✅
+  - TeacherSettingsCubit 구현 ✅
+  - 교사용 대시보드 UI 구현 (탭 형식으로 구성) ✅
+- 코드 버그 수정 및 구조 개선 작업 ✅
+  - AuthFailure 클래스에 code 필드 추가 ✅
+  - PapsCubit 클래스에 loadPapsStandards 필드 및 기능 추가 ✅
+  - 의존성 주입 구조 개선 (lib/di/injection_container.dart 사용) ✅
+  - Firebase 관련 서비스 클래스 개선 및 구현 ✅
+  - 오류 처리 개선 (Failure 클래스 구조 통일) ✅
 
 ### 테스트 계정 정보
 
@@ -160,33 +205,42 @@
 ### 도메인 계층 (Domain Layer)
 
 - **엔티티**: 핵심 비즈니스 모델 구현 완료 및 구조 개선
-  - User, PapsRecord, PapsStandard 등
+  - User, PapsRecord, PapsStandard, TeacherSettings 등
   - 구조 일관성을 위해 entities 폴더로 통합 관리
 - **레포지토리 인터페이스**: 데이터 접근 추상화 구현 완료
-  - AuthRepository, PapsRepository
+  - AuthRepository, PapsRepository, TeacherSettingsRepository 등
   - API 일관성을 위해 모든 실패 반환 타입을 Failure로 통일
 - **유스케이스**: 핵심 비즈니스 로직 구현 완료
-  - LoadPapsStandards, CalculatePapsGrade, SignInWithEmailPassword 등
+  - LoadPapsStandards, CalculatePapsGrade, SignInWithEmailPassword, GetTeacherSettings, SaveTeacherSettings, SignOut 등
 
 ### 프레젠테이션 계층 (Presentation Layer)
 
 - **UI 화면**: 주요 화면 구현 완료
-  - 인증 화면, 홈 화면, 팝스 기준표 화면, 팝스 측정 화면 등
+  - 인증 화면, 홈 화면, 팝스 기준표 화면, 팝스 측정 화면, 교사용 대시보드 등
 - **상태 관리**: BLoC/Cubit 패턴 적용 완료
-  - AuthCubit, PapsCubit
+  - AuthCubit, PapsCubit, TeacherSettingsCubit 등
 
 ### 데이터 계층 (Data Layer)
 
 - **데이터 소스**: 로컬/원격 데이터 접근 구현 완료
-  - PapsLocalDataSource, PapsRemoteDataSource, AuthRemoteDataSource
+  - PapsLocalDataSource, PapsRemoteDataSource, AuthRemoteDataSource, AuthLocalDataSource, TeacherSettingsRemoteDataSource 등
 - **레포지토리 구현체**: 레포지토리 인터페이스 구현 완료 및 개선
-  - PapsRepositoryImpl, AuthRepositoryImpl
+  - PapsRepositoryImpl, AuthRepositoryImpl, TeacherSettingsRepositoryImpl 등
   - 코드 생성 의존성 제거 및 수동 직렬화 로직 구현
 
 ## 의존성 주입
 
 - GetIt을 이용한 의존성 주입 설정 구현 완료
 - 주요 서비스, 레포지토리, 유스케이스 의존성 등록 완료
+- 의존성 주입 구조 개선 (lib/di/injection_container.dart 사용)
+
+## 오류 처리 개선
+
+- Failure 클래스 구조 개선
+  - 모든 Failure 클래스에 message 필드 추가
+  - AuthFailure에 code 필드 추가
+  - ServerFailure, NetworkFailure, CacheFailure에 기본 오류 메시지 설정
+  - UnknownFailure 클래스 추가
 
 ## 주요 기능 및 우선순위
 
@@ -222,5 +276,5 @@
 - Firebase Authentication 연동 구현 완료
 - Firestore 연동 구현 완료
 - FlutterFire CLI를 통한 Firebase 프로젝트 연결 완료
-- Firebase 서비스 클래스 구현 완료 (FirebaseAuthService, FirebaseFirestoreService)
+- Firebase 서비스 클래스 구현 완료 (FirebaseAuthService, FirebaseFirestoreService, FirebaseDataSeed)
 - Firebase Hosting 설정 및 웹앱 배포 완료

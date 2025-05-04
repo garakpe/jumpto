@@ -48,8 +48,8 @@ class _LoginPageState extends State<LoginPage> {
       body: BlocConsumer<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
-            // 로그인 성공 시 홈 화면으로 이동
-            context.go('/home');
+            // 로그인 성공 시 콘텐츠 선택 화면으로 이동
+            context.go('/content-selection');
           } else if (state is AuthError) {
             // 로그인 실패 시 오류 메시지 표시
             ScaffoldMessenger.of(context).showSnackBar(

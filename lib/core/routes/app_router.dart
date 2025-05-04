@@ -5,10 +5,12 @@ import '../../features/auth/domain/entities/user.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
+import '../../features/common/presentation/pages/content_selection_page.dart';
 import '../../features/paps/presentation/pages/home_page.dart';
 import '../../features/paps/presentation/pages/paps_measurement_page.dart';
 import '../../features/paps/presentation/pages/paps_standards_page.dart';
 import '../../features/paps/presentation/pages/teacher_event_selection_page.dart';
+import '../../features/teacher_dashboard/presentation/pages/teacher_dashboard_page.dart';
 
 /// 앱 라우팅 설정
 class AppRouter {
@@ -50,15 +52,20 @@ class AppRouter {
           return '/login';
         }
         
-        // 이미 로그인한 경우 인증 화면으로 가지 못하도록 홈으로 리디렉션
+        // 이미 로그인한 경우 인증 화면으로 가지 못하도록 콘텐츠 선택 화면으로 리디렉션
         if (isLoggedIn && isGoingToAuth) {
-          return '/home';
+          return '/content-selection';
         }
         
         // 기본적으로 리디렉션 없음
         return null;
       },
       routes: [
+        // 콘텐츠 선택 화면
+        GoRoute(
+          path: '/content-selection',
+          builder: (context, state) => const ContentSelectionPage(),
+        ),
         // 스플래시 화면
         GoRoute(
           path: '/splash',
@@ -97,6 +104,12 @@ class AppRouter {
         GoRoute(
           path: '/teacher-event-selection',
           builder: (context, state) => const TeacherEventSelectionPage(),
+        ),
+        
+        // 교사용 대시보드 화면 (신규 추가)
+        GoRoute(
+          path: '/teacher-dashboard',
+          builder: (context, state) => const TeacherDashboardPage(),
         ),
       ],
     );

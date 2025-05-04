@@ -28,8 +28,8 @@ class _SplashPageState extends State<SplashPage> {
       body: BlocListener<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
-            // 인증된 사용자인 경우 홈 화면으로 이동
-            context.go('/home');
+            // 인증된 사용자인 경우 콘텐츠 선택 화면으로 이동
+            context.go('/content-selection');
           } else if (state is AuthUnauthenticated) {
             // 인증되지 않은 사용자인 경우 로그인 화면으로 이동
             context.go('/login');

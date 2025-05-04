@@ -5,13 +5,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:universal_html/html.dart' as html;
 
 import 'core/firebase/firebase_data_seed.dart';
-
 import 'core/presentation/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
 import 'features/auth/presentation/cubit/auth_cubit.dart';
 import 'features/paps/presentation/cubit/paps_cubit.dart';
+import 'features/teacher_dashboard/presentation/cubit/teacher_settings_cubit.dart';
 import 'firebase_options.dart';
-import 'injection_container.dart' as di;
+import 'di/injection_container.dart' as di;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,10 +22,10 @@ void main() async {
   );
   
   // 의존성 주입 초기화
-  await di.initializeDependencies();
+  await di.init();
   
-  // 테스트 데이터 시드 실행
-  await di.sl<FirebaseDataSeed>().seedTestData();
+  // 테스트 데이터 시드 실행 (필요한 경우)
+  // await di.sl<FirebaseDataSeed>().seedTestData();
   
   // 웹 환경에서 PAPS 기준표 미리 로드
   if (kIsWeb) {
@@ -98,21 +98,15 @@ class MyApp extends StatelessWidget {
       providers: [
         // 인증 Cubit 제공
         BlocProvider<AuthCubit>(
-          create: (context) => AuthCubit(
-            signInWithEmailPassword: di.sl(),
-            getCurrentUser: di.sl(),
-            registerTeacher: di.sl(),
-            signInStudent: di.sl(),
-          ),
+          create: (context) => di.sl<AuthCubit>(),
         ),
         // 팝스 Cubit 제공
         BlocProvider<PapsCubit>(
-          create: (context) => PapsCubit(
-            getPapsStandards: di.sl(),
-            calculatePapsGrade: di.sl(),
-            savePapsRecord: di.sl(),
-            getStudentPapsRecords: di.sl(),
-          ),
+          create: (context) => di.sl<PapsCubit>(),
+        ),
+        // 교사 설정 Cubit 제공 (추가)
+        BlocProvider<TeacherSettingsCubit>(
+          create: (context) => di.sl<TeacherSettingsCubit>(),
         ),
       ],
       child: MaterialApp.router(

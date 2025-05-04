@@ -6,6 +6,7 @@ import '../../domain/entities/index.dart';
 import '../../domain/usecases/calculate_paps_grade.dart';
 import '../../domain/usecases/get_paps_standards.dart';
 import '../../domain/usecases/get_student_paps_records.dart';
+import '../../domain/usecases/load_paps_standards.dart';
 import '../../domain/usecases/save_paps_record.dart';
 
 // PAPS 상태
@@ -80,16 +81,19 @@ class PapsCubit extends Cubit<PapsState> {
   final CalculatePapsGrade _calculatePapsGrade;
   final SavePapsRecord _savePapsRecord;
   final GetStudentPapsRecords _getStudentPapsRecords;
+  final LoadPapsStandards _loadPapsStandards;
   
   PapsCubit({
     required GetPapsStandards getPapsStandards,
     required CalculatePapsGrade calculatePapsGrade,
     required SavePapsRecord savePapsRecord,
     required GetStudentPapsRecords getStudentPapsRecords,
+    required LoadPapsStandards loadPapsStandards,
   }) : _getPapsStandards = getPapsStandards,
        _calculatePapsGrade = calculatePapsGrade,
        _savePapsRecord = savePapsRecord,
        _getStudentPapsRecords = getStudentPapsRecords,
+       _loadPapsStandards = loadPapsStandards,
        super(PapsInitial());
   
   /// 팝스 기준표 가져오기
@@ -176,6 +180,11 @@ class PapsCubit extends Cubit<PapsState> {
       (failure) => emit(PapsError(_mapFailureToMessage(failure))),
       (records) => emit(PapsStudentRecordsLoaded(records)),
     );
+  }
+  
+  /// 팝스 기준표 직접 로드하기
+  Future<PapsStandardsCollection> loadStandardsCollection() async {
+    return await _loadPapsStandards.getStandardsCollection();
   }
   
   /// 실패 유형에 따른 오류 메시지 반환

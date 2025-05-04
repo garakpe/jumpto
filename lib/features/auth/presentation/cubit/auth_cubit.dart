@@ -11,6 +11,7 @@ import '../../domain/usecases/get_current_user.dart';
 import '../../domain/usecases/register_teacher.dart';
 import '../../domain/usecases/sign_in_with_email_password.dart';
 import '../../domain/usecases/sign_in_student.dart';
+import '../../domain/usecases/sign_out.dart';
 
 // Auth 상태
 abstract class AuthState extends Equatable {
@@ -53,6 +54,7 @@ class AuthCubit extends Cubit<AuthState> {
   final GetCurrentUser _getCurrentUser;
   final RegisterTeacher _registerTeacher;
   final SignInStudent _signInStudent;
+  final SignOut _signOut;
   
   // 인증 상태 스트림 구독
   StreamSubscription? _authStateSubscription;
@@ -62,10 +64,12 @@ class AuthCubit extends Cubit<AuthState> {
     required GetCurrentUser getCurrentUser,
     required RegisterTeacher registerTeacher,
     required SignInStudent signInStudent,
+    required SignOut signOut,
   }) : _signInWithEmailPassword = signInWithEmailPassword,
        _getCurrentUser = getCurrentUser,
        _registerTeacher = registerTeacher,
        _signInStudent = signInStudent,
+       _signOut = signOut,
        super(AuthInitial()) {
     checkAuthState();
   }
@@ -177,9 +181,17 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> signOut() async {
     emit(AuthLoading());
     
-    // 로그아웃 로직 추가 예정
-    AppRouter.setCurrentUser(null);
-    emit(AuthUnauthenticated());
+    final result = await _signOut(NoParams());
+    
+    result.fold(
+      (failure) {
+        emit(AuthError(_mapFailureToMessage(failure)));
+      },
+      (_) {
+        AppRouter.setCurrentUser(null);
+        emit(AuthUnauthenticated());
+      },
+    );
   }
   
   @override
@@ -192,11 +204,15 @@ class AuthCubit extends Cubit<AuthState> {
   String _mapFailureToMessage(Failure failure) {
     switch (failure.runtimeType) {
       case AuthFailure:
-        return failure.message;
+        return (failure as AuthFailure).message;
       case ServerFailure:
-        return '서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+        return (failure as ServerFailure).message;
       case NetworkFailure:
-        return '네트워크 연결을 확인해 주세요.';
+        return (failure as NetworkFailure).message;
+      case CacheFailure:
+        return (failure as CacheFailure).message;
+      case UnknownFailure:
+        return (failure as UnknownFailure).message;
       default:
         return '알 수 없는 오류가 발생했습니다.';
     }
