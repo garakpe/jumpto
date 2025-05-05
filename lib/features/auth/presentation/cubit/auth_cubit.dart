@@ -96,6 +96,38 @@ class AuthCubit extends Cubit<AuthState> {
     );
   }
   
+  /// 현재 사용자 정보 재로드
+  Future<void> checkCurrentUser() async {
+    // 현재 상태가 인증됨이 아닌 경우 실행하지 않음
+    if (state is! AuthAuthenticated) {
+      return;
+    }
+    
+    emit(AuthLoading());
+    
+    final result = await _getCurrentUser(NoParams());
+    
+    result.fold(
+      (failure) {
+        emit(AuthError(_mapFailureToMessage(failure)));
+        // 상태 유지
+        if (state is AuthAuthenticated) {
+          emit(AuthAuthenticated((state as AuthAuthenticated).user));
+        } else {
+          emit(AuthUnauthenticated());
+        }
+      },
+      (user) {
+        if (user != null) {
+          AppRouter.setCurrentUser(user);
+          emit(AuthAuthenticated(user));
+        } else {
+          emit(AuthUnauthenticated());
+        }
+      },
+    );
+  }
+  
   /// 이메일/비밀번호로 로그인
   Future<void> signInWithEmailPassword({
     required String email,
@@ -125,6 +157,7 @@ class AuthCubit extends Cubit<AuthState> {
     required String password,
     required String displayName,
     String? schoolId,
+    String? phoneNumber,
   }) async {
     emit(AuthLoading());
     
@@ -134,6 +167,7 @@ class AuthCubit extends Cubit<AuthState> {
         password: password,
         displayName: displayName,
         schoolId: schoolId,
+        phoneNumber: phoneNumber,
       ),
     );
     

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/admin/presentation/pages/admin_dashboard_page.dart';
+import '../../features/admin/presentation/pages/admin_login_page.dart';
 import '../../features/auth/domain/entities/user.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
+import '../../features/auth/presentation/pages/waiting_approval_page.dart';
 import '../../features/common/presentation/pages/content_selection_page.dart';
 import '../../features/paps/presentation/pages/home_page.dart';
 import '../../features/paps/presentation/pages/paps_measurement_page.dart';
@@ -29,6 +32,11 @@ class AppRouter {
     }
   }
   
+  /// 관리자 로그인 여부
+  static bool _isAdminPath(String path) {
+    return path.startsWith('/admin');
+  }
+  
   /// 라우터 인스턴스
   static GoRouter? _router;
   
@@ -43,6 +51,17 @@ class AppRouter {
           return null;
         }
         
+        // 관리자 경로인 경우 일반 인증 여부 검사 제외
+        if (_isAdminPath(state.fullPath!)) {
+          // 관리자 대시보드로 가는 경우 로그인 여부 확인
+          if (state.fullPath == '/admin/dashboard') {
+            if (_currentUser == null || !_currentUser!.isAdmin) {
+              return '/admin/login';
+            }
+          }
+          return null; // 관리자 관련 경로는 기본 리디렉션 없음
+        }
+        
         // 인증 여부에 따른 리디렉션
         final bool isLoggedIn = _currentUser != null;
         final bool isGoingToAuth = state.fullPath == '/login' || state.fullPath == '/register';
@@ -55,6 +74,14 @@ class AppRouter {
         // 이미 로그인한 경우 인증 화면으로 가지 못하도록 콘텐츠 선택 화면으로 리디렉션
         if (isLoggedIn && isGoingToAuth) {
           return '/content-selection';
+        }
+        
+        // 교사 승인 여부 확인
+        if (isLoggedIn && _currentUser!.isTeacher && !_currentUser!.isApproved) {
+          // 승인 대기 화면으로 리디렉션 (승인 대기 화면은 접근 가능)
+          if (state.fullPath != '/waiting-approval') {
+            return '/waiting-approval';
+          }
         }
         
         // 기본적으로 리디렉션 없음
@@ -106,10 +133,28 @@ class AppRouter {
           builder: (context, state) => const TeacherEventSelectionPage(),
         ),
         
-        // 교사용 대시보드 화면 (신규 추가)
+        // 교사용 대시보드 화면
         GoRoute(
           path: '/teacher-dashboard',
           builder: (context, state) => const TeacherDashboardPage(),
+        ),
+        
+        // 승인 대기 화면
+        GoRoute(
+          path: '/waiting-approval',
+          builder: (context, state) => const WaitingApprovalPage(),
+        ),
+        
+        // 관리자 로그인 화면 (숨겨진 URL)
+        GoRoute(
+          path: '/admin/login',
+          builder: (context, state) => const AdminLoginPage(),
+        ),
+        
+        // 관리자 대시보드 화면
+        GoRoute(
+          path: '/admin/dashboard',
+          builder: (context, state) => const AdminDashboardPage(),
         ),
       ],
     );

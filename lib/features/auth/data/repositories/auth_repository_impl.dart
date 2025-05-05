@@ -28,6 +28,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
     required String displayName,
     String? schoolId,
+    String? phoneNumber,
   }) async {
     try {
       final user = await _remoteDataSource.signUpTeacher(
@@ -35,6 +36,7 @@ class AuthRepositoryImpl implements AuthRepository {
         password: password,
         displayName: displayName,
         schoolId: schoolId,
+        phoneNumber: phoneNumber,
       );
       return Right(user);
     } catch (e) {

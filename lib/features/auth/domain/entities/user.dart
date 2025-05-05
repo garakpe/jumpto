@@ -1,5 +1,6 @@
-/// 사용자 역할 (교사/학생)
+/// 사용자 역할 (관리자/교사/학생)
 enum UserRole {
+  admin('관리자'),
   teacher('교사'),
   student('학생');
   
@@ -39,6 +40,12 @@ class User {
   /// 성별 (학생인 경우)
   final String? gender;
   
+  /// 핸드폰 번호 (교사인 경우)
+  final String? phoneNumber;
+  
+  /// 계정 승인 상태 (교사인 경우)
+  final bool isApproved;
+  
   /// 생성자
   User({
     required this.id,
@@ -49,6 +56,8 @@ class User {
     this.classId,
     this.studentNumber,
     this.gender,
+    this.phoneNumber,
+    this.isApproved = false,
   });
   
   /// 익명 사용자 여부
@@ -59,6 +68,9 @@ class User {
 
   /// 학생 여부
   bool get isStudent => role == UserRole.student;
+  
+  /// 관리자 여부
+  bool get isAdmin => role == UserRole.admin;
   
   @override
   String toString() {

@@ -14,6 +14,7 @@ abstract class AuthRepository {
     required String password,
     required String displayName,
     String? schoolId,
+    String? phoneNumber,
   });
   
   /// 학생 계정 생성 (교사에 의해)

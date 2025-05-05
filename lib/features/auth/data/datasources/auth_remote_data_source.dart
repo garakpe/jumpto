@@ -14,6 +14,7 @@ abstract class AuthRemoteDataSource {
     required String password,
     required String displayName,
     String? schoolId,
+    String? phoneNumber,
   });
   
   /// 학생 계정 생성 (교사에 의해)
@@ -108,6 +109,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         classId: userData['classId'],
         studentNumber: userData['studentNumber'],
         gender: userData['gender'],
+        phoneNumber: userData['phoneNumber'],
       );
     } catch (e) {
       print('사용자 데이터 가져오기 오류: $e');
@@ -121,6 +123,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String password,
     required String displayName,
     String? schoolId,
+    String? phoneNumber,
   }) async {
     try {
       // Firebase Auth로 계정 생성
@@ -137,6 +140,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'displayName': displayName,
         'role': 'teacher',
         'schoolId': schoolId,
+        'phoneNumber': phoneNumber,
         'createdAt': FieldValue.serverTimestamp(),
       });
       
@@ -147,6 +151,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         displayName: displayName,
         role: domain.UserRole.teacher,
         schoolId: schoolId,
+        phoneNumber: phoneNumber,
       );
     } catch (e) {
       print('교사 회원가입 오류: $e');

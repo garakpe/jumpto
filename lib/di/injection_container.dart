@@ -4,8 +4,16 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/firebase/admin_seed.dart';
 import '../core/network/network_info.dart';
 import '../core/usecases/usecase.dart';
+import '../features/admin/data/datasources/admin_remote_data_source.dart';
+import '../features/admin/data/repositories/admin_repository_impl.dart';
+import '../features/admin/domain/repositories/admin_repository.dart';
+import '../features/admin/domain/usecases/approve_teacher.dart';
+import '../features/admin/domain/usecases/get_pending_teachers.dart';
+import '../features/admin/domain/usecases/sign_in_admin.dart';
+import '../features/admin/presentation/cubit/admin_cubit.dart';
 import '../features/auth/data/datasources/auth_local_data_source.dart';
 import '../features/auth/data/datasources/auth_remote_data_source.dart';
 import '../features/auth/data/repositories/auth_repository_impl.dart';
@@ -38,6 +46,9 @@ final sl = GetIt.instance;
 
 /// 의존성 주입 초기화
 Future<void> init() async {
+  // 초기 관리자 계정 생성
+  final adminSeed = AdminSeed(FirebaseAuth.instance, FirebaseFirestore.instance);
+  await adminSeed.seedAdminUser();
   // External
   sl.registerLazySingleton<FirebaseFirestore>(() => FirebaseFirestore.instance);
   sl.registerLazySingleton<FirebaseAuth>(() => FirebaseAuth.instance);
@@ -137,6 +148,32 @@ Future<void> init() async {
     () => TeacherSettingsCubit(
       getTeacherSettings: sl(),
       saveTeacherSettings: sl(),
+    ),
+  );
+  
+  // Features - Admin
+  // Data Sources
+  sl.registerLazySingleton<AdminRemoteDataSource>(
+    () => AdminRemoteDataSourceImpl(sl(), sl()),
+  );
+  
+  // Repositories
+  sl.registerLazySingleton<AdminRepository>(
+    () => AdminRepositoryImpl(sl()),
+  );
+  
+  // Use Cases
+  sl.registerLazySingleton(() => SignInAdmin(sl()));
+  sl.registerLazySingleton(() => GetPendingTeachers(sl()));
+  sl.registerLazySingleton(() => ApproveTeacher(sl()));
+  
+  // BLoC
+  sl.registerFactory(
+    () => AdminCubit(
+      signInAdmin: sl(),
+      getPendingTeachers: sl(),
+      approveTeacher: sl(),
+      adminRepository: sl(),
     ),
   );
   
