@@ -1,5 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/error/failures.dart';
+
 import '../../../../core/usecases/usecase.dart';
 import '../../domain/repositories/admin_repository.dart';
 import '../../domain/usecases/approve_teacher.dart';

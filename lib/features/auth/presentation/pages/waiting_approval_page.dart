@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/presentation/theme/app_colors.dart';
 import '../cubit/auth_cubit.dart';
-import '../cubit/auth_state.dart';
 
 /// 교사 계정 승인 대기 화면
 class WaitingApprovalPage extends StatelessWidget {
@@ -35,7 +34,7 @@ class WaitingApprovalPage extends StatelessWidget {
           if (state is AuthLoading) {
             return const Center(child: CircularProgressIndicator());
           }
-          
+
           return Center(
             child: Container(
               constraints: const BoxConstraints(maxWidth: 400),
@@ -57,17 +56,14 @@ class WaitingApprovalPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // 제목
                   const Text(
                     '관리자 승인 대기 중',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // 설명
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -98,7 +94,7 @@ class WaitingApprovalPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // 새로고침 버튼
                   ElevatedButton.icon(
                     onPressed: () {
@@ -116,7 +112,7 @@ class WaitingApprovalPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // 로그아웃 버튼
                   TextButton.icon(
                     onPressed: () => _showLogoutConfirmDialog(context),
@@ -131,31 +127,30 @@ class WaitingApprovalPage extends StatelessWidget {
       ),
     );
   }
-  
+
   /// 로그아웃 확인 다이얼로그
   void _showLogoutConfirmDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('로그아웃'),
-        content: const Text('정말 로그아웃하시겠습니까?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('로그아웃'),
+            content: const Text('정말 로그아웃하시겠습니까?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  context.read<AuthCubit>().signOut();
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('로그아웃'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<AuthCubit>().signOut();
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
-            child: const Text('로그아웃'),
-          ),
-        ],
-      ),
     );
   }
 }

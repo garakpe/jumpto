@@ -1,10 +1,4 @@
-## 향후 개선 사항
-
-- **오프라인 지원**: 네트워크 연결이 없는 환경에서도 기본 기능을 사용할 수 있도록 오프라인 모드 지원
-- **데이터 동기화**: 로컬에 저장된 데이터와 서버 데이터의 효율적인 동기화 메커니즘 구현
-- **사용성 개선**: 사용자 피드백을 반영한 UI/UX 개선
-- **코드 최적화**: 빌드 크기 감소 및 성능 최적화
-- **테스트 자동화**: CI/CD 파이프라인 구축# 온라인 팝스(PAPS) 교육 플랫폼 개발 계획
+# 온라인 팝스(PAPS) 교육 플랫폼 개발 계획
 
 ## 프로젝트 개요
 
@@ -108,9 +102,14 @@
 ### 현재 진행 중인 작업
 
 - Firebase Authentication 설정 (이메일/비밀번호 인증 활성화) ✅
-- Firestore 데이터베이스 보안 규칙 설정
+- Firestore 데이터베이스 보안 규칙 설정 ✅
 - 학생용 로그인 구현 완성 ✅
 - 테스트용 계정 생성 및 디버깅 ✅
+- 교사 회원가입 승인 기능 구현 ✅
+  - 관리자 역할 추가 ✅
+  - 숨겨진 관리자 로그인 URL 구현 ✅
+  - 교사 승인 대기 화면 구현 ✅
+  - 관리자 대시보드 구현 ✅
 - 교사용 대시보드 개발 진행 중 ✅
   - 교사용 대시보드 UI 디자인 ✅
   - 콘텐츠 선택 화면에서 교사용 대시보드로 연결 ✅
@@ -124,6 +123,9 @@
   - 측정결과조회 탭 기능 구현
   - 평가 탭 기능 구현
   - 되돌아보기 탭 기능 구현
+- 교사 승인 기능 개선
+  - 자동 이메일 알림 기능 추가
+  - 학교, 학반 정보 관리 기능 추가
 - 학생 측정 결과 데이터 모델 및 저장소 구현
 - Firebase Firestore 데이터 구조 최적화
 - 성능 개선 및 오류 처리 강화
@@ -142,6 +144,16 @@
 ### 새로 추가된 내용
 
 - 학생 로그인 유스케이스(SignInStudent) 추가
+- 관리자 관련 기능 구현
+  - 관리자 역할 추가 (UserRole enum 수정)
+  - 관리자 도메인 모델 구현 (AdminRepository 등)
+  - 관리자 프레젠테이션 계층 구현 (AdminCubit, AdminLoginPage 등)
+  - 숨겨진 관리자 URL 구현 (/admin/login 경로)
+- 교사 회원가입 관련 기능 개선
+  - 계정 승인 상태 필드 추가 (isApproved)
+  - 승인 대기 화면 구현 (WaitingApprovalPage)
+  - Firebase Firestore 보안 규칙 개선
+- 초기 관리자 계정 자동 생성 기능 구현 (AdminSeed)
 - 웹 환경에서 팝스 측정 기능 작동 개선
   - localStorage를 활용한 팝스 기준표 캐싱 기능 구현
   - 다양한 로드 경로 시도 및 폴백 데이터 제공 기능 추가
@@ -168,7 +180,7 @@
   - 오류 처리 개선 (Failure 클래스 구조 통일) ✅
 - 교사 회원가입 화면 개선 ✅
   - 핸드폰 번호 필드 추가 ✅
-  - 자동 하이픈 포맧 추가 ✅
+  - 자동 하이픈 포맷 추가 ✅
   - 이메일, 비밀번호 유효성 검사 강화 ✅
   - User 엔티티에 phoneNumber 필드 추가 ✅
 
@@ -186,16 +198,24 @@
 - 학번: 1
 - 비밀번호: student123
 
+**관리자 계정:**
+
+- 아이디: admin
+- 비밀번호: admin123
+- 접근 URL: /admin/login
+
 1. **Firebase Console 추가 설정**
 
    - Firebase Authentication에서 이메일/비밀번호 로그인 활성화 ✅
-   - Firestore 데이터베이스 보안 규칙 작성 및 적용
-   - 초기 관리자 계정 생성 (테스트용 계정 생성 완료)
+   - Firestore 데이터베이스 보안 규칙 작성 및 적용 ✅
+   - 초기 관리자 계정 생성 기능 구현 ✅
    - Firebase 호스팅 구성 및 웹 앱 배포 ✅
 
 2. **추가 기능 구현**
 
-   - 학생용 로그인 기능 완성
+   - 학생용 로그인 기능 완성 ✅
+   - 관리자 기능 구현 ✅
+   - 교사 계정 승인 기능 구현 ✅
    - 학생 기록 관리 화면 구현 (교사용)
    - 내 기록 조회 화면 구현 (학생용)
    - 보고서 생성 기능 구현
@@ -215,24 +235,24 @@
   - User, PapsRecord, PapsStandard, TeacherSettings 등
   - 구조 일관성을 위해 entities 폴더로 통합 관리
 - **레포지토리 인터페이스**: 데이터 접근 추상화 구현 완료
-  - AuthRepository, PapsRepository, TeacherSettingsRepository 등
+  - AuthRepository, PapsRepository, TeacherSettingsRepository, AdminRepository 등
   - API 일관성을 위해 모든 실패 반환 타입을 Failure로 통일
 - **유스케이스**: 핵심 비즈니스 로직 구현 완료
-  - LoadPapsStandards, CalculatePapsGrade, SignInWithEmailPassword, GetTeacherSettings, SaveTeacherSettings, SignOut 등
+  - LoadPapsStandards, CalculatePapsGrade, SignInWithEmailPassword, GetTeacherSettings, SaveTeacherSettings, SignInAdmin, ApproveTeacher 등
 
 ### 프레젠테이션 계층 (Presentation Layer)
 
 - **UI 화면**: 주요 화면 구현 완료
-  - 인증 화면, 홈 화면, 팝스 기준표 화면, 팝스 측정 화면, 교사용 대시보드 등
+  - 인증 화면, 홈 화면, 팝스 기준표 화면, 팝스 측정 화면, 교사용 대시보드, 관리자 화면 등
 - **상태 관리**: BLoC/Cubit 패턴 적용 완료
-  - AuthCubit, PapsCubit, TeacherSettingsCubit 등
+  - AuthCubit, PapsCubit, TeacherSettingsCubit, AdminCubit 등
 
 ### 데이터 계층 (Data Layer)
 
 - **데이터 소스**: 로컬/원격 데이터 접근 구현 완료
-  - PapsLocalDataSource, PapsRemoteDataSource, AuthRemoteDataSource, AuthLocalDataSource, TeacherSettingsRemoteDataSource 등
+  - PapsLocalDataSource, PapsRemoteDataSource, AuthRemoteDataSource, AuthLocalDataSource, TeacherSettingsRemoteDataSource, AdminRemoteDataSource 등
 - **레포지토리 구현체**: 레포지토리 인터페이스 구현 완료 및 개선
-  - PapsRepositoryImpl, AuthRepositoryImpl, TeacherSettingsRepositoryImpl 등
+  - PapsRepositoryImpl, AuthRepositoryImpl, TeacherSettingsRepositoryImpl, AdminRepositoryImpl 등
   - 코드 생성 의존성 제거 및 수동 직렬화 로직 구현
 
 ## 의존성 주입
@@ -240,6 +260,7 @@
 - GetIt을 이용한 의존성 주입 설정 구현 완료
 - 주요 서비스, 레포지토리, 유스케이스 의존성 등록 완료
 - 의존성 주입 구조 개선 (lib/di/injection_container.dart 사용)
+- 관리자 기능 관련 의존성 등록 완료
 
 ## 오류 처리 개선
 
@@ -257,8 +278,9 @@
    - 측정 종목 선택 기능 (교사)
    - 측정 기록 저장 및 등급/점수 자동 산출 기능 (학생)
 
-2. **확장 기능 - 2단계 (진행 예정)**
+2. **확장 기능 - 2단계 (진행 중)**
 
+   - 교사 계정 승인 기능 (관리자)
    - 학생 명단 관리
    - 활동 결과(소감문) 제출 및 관리
    - 데이터 엑셀 다운로드
@@ -266,6 +288,7 @@
 3. **추가 기능 - 3단계 (진행 예정)**
    - 모둠 활동 기능
    - 소감문 채점/피드백 기능
+   - 교사/학생 대시보드 개선
 
 ## 일정 계획
 
@@ -274,7 +297,8 @@
 - **레포지토리 및 유스케이스 구현**: 완료
 - **UI 개발**: 완료
 - **Firebase 연결**: 완료
-- **추가 기능 개발**: 진행 예정
+- **관리자 기능 개발**: 완료
+- **추가 기능 개발**: 진행 중
 - **테스트 및 배포**: 진행 예정
 
 ## Firebase 연동 현황
@@ -285,3 +309,13 @@
 - FlutterFire CLI를 통한 Firebase 프로젝트 연결 완료
 - Firebase 서비스 클래스 구현 완료 (FirebaseAuthService, FirebaseFirestoreService, FirebaseDataSeed)
 - Firebase Hosting 설정 및 웹앱 배포 완료
+- Firestore 보안 규칙 구현 완료
+- 초기 관리자 계정 자동 생성 기능 구현 완료
+
+## 향후 개선 사항
+
+- **오프라인 지원**: 네트워크 연결이 없는 환경에서도 기본 기능을 사용할 수 있도록 오프라인 모드 지원
+- **데이터 동기화**: 로컬에 저장된 데이터와 서버 데이터의 효율적인 동기화 메커니즘 구현
+- **사용성 개선**: 사용자 피드백을 반영한 UI/UX 개선
+- **코드 최적화**: 빌드 크기 감소 및 성능 최적화
+- **테스트 자동화**: CI/CD 파이프라인 구축

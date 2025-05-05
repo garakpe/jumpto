@@ -2,6 +2,9 @@ import 'package:equatable/equatable.dart';
 
 /// 실패 추상 클래스
 abstract class Failure extends Equatable {
+  /// 실패 메시지
+  String get message => '';
+  
   @override
   List<Object?> get props => [];
 }

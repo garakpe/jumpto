@@ -7,6 +7,7 @@ import 'package:universal_html/html.dart' as html;
 import 'core/firebase/firebase_data_seed.dart';
 import 'core/presentation/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
+import 'features/admin/presentation/cubit/admin_cubit.dart';
 import 'features/auth/presentation/cubit/auth_cubit.dart';
 import 'features/paps/presentation/cubit/paps_cubit.dart';
 import 'features/teacher_dashboard/presentation/cubit/teacher_settings_cubit.dart';
@@ -15,23 +16,21 @@ import 'di/injection_container.dart' as di;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Firebase 초기화
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   // 의존성 주입 초기화
   await di.init();
-  
+
   // 테스트 데이터 시드 실행 (필요한 경우)
   // await di.sl<FirebaseDataSeed>().seedTestData();
-  
+
   // 웹 환경에서 PAPS 기준표 미리 로드
   if (kIsWeb) {
     await _preloadPapsStandards();
   }
-  
+
   runApp(const MyApp());
 }
 
@@ -44,10 +43,12 @@ Future<void> _preloadPapsStandards() async {
       print('캐싱된 팝스 기준표 데이터가 있어 사용합니다.');
       return;
     }
-    
+
     // 각 경로를 시도하면서 처음 성공하는 경로의 데이터를 캐싱
     try {
-      final response = await html.window.fetch('assets/data/paps_standards.json');
+      final response = await html.window.fetch(
+        'assets/data/paps_standards.json',
+      );
       if (response.ok) {
         final text = await response.text();
         html.window.localStorage['paps_standards_cache'] = text;
@@ -57,9 +58,11 @@ Future<void> _preloadPapsStandards() async {
     } catch (e) {
       print('첫 번째 경로 미리 로드 실패: $e');
     }
-    
+
     try {
-      final response = await html.window.fetch('/assets/data/paps_standards.json');
+      final response = await html.window.fetch(
+        '/assets/data/paps_standards.json',
+      );
       if (response.ok) {
         final text = await response.text();
         html.window.localStorage['paps_standards_cache'] = text;
@@ -69,7 +72,7 @@ Future<void> _preloadPapsStandards() async {
     } catch (e) {
       print('두 번째 경로 미리 로드 실패: $e');
     }
-    
+
     try {
       final response = await html.window.fetch('paps_standards.json');
       if (response.ok) {
@@ -81,7 +84,7 @@ Future<void> _preloadPapsStandards() async {
     } catch (e) {
       print('세 번째 경로 미리 로드 실패: $e');
     }
-    
+
     print('모든 미리 로드 시도가 실패했습니다. LoadPapsStandards 클래스에서 폴백 데이터를 사용할 것입니다.');
   } catch (e) {
     print('팝스 기준표 미리 로드 중 오류 발생: $e');
@@ -97,17 +100,14 @@ class MyApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         // 인증 Cubit 제공
-        BlocProvider<AuthCubit>(
-          create: (context) => di.sl<AuthCubit>(),
-        ),
+        BlocProvider<AuthCubit>(create: (context) => di.sl<AuthCubit>()),
         // 팝스 Cubit 제공
-        BlocProvider<PapsCubit>(
-          create: (context) => di.sl<PapsCubit>(),
-        ),
+        BlocProvider<PapsCubit>(create: (context) => di.sl<PapsCubit>()),
         // 교사 설정 Cubit 제공 (추가)
         BlocProvider<TeacherSettingsCubit>(
           create: (context) => di.sl<TeacherSettingsCubit>(),
         ),
+        BlocProvider<AdminCubit>(create: (context) => di.sl<AdminCubit>()),
       ],
       child: MaterialApp.router(
         title: '온라인 팝스',

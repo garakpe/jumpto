@@ -8,6 +8,7 @@ class AppButton extends StatelessWidget {
   final bool isPrimary;
   final bool isFullWidth;
   final IconData? icon;
+  final double? width;
   
   const AppButton({
     super.key,
@@ -17,6 +18,7 @@ class AppButton extends StatelessWidget {
     this.isPrimary = true,
     this.isFullWidth = true,
     this.icon,
+    this.width,
   });
 
   @override
@@ -50,7 +52,7 @@ class AppButton extends StatelessWidget {
     
     return isFullWidth
         ? SizedBox(
-            width: double.infinity,
+            width: width ?? double.infinity,
             child: button,
           )
         : button;

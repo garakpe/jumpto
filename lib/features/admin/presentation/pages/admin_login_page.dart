@@ -3,8 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/presentation/theme/app_colors.dart';
-import '../../../../core/widgets/app_button.dart';
-import '../../../../core/widgets/app_text_field.dart';
+import '../../../../core/presentation/widgets/app_button.dart';
+import '../../../../core/presentation/widgets/app_text_field.dart';
 import '../cubit/admin_cubit.dart';
 import '../cubit/admin_state.dart';
 
@@ -88,7 +88,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                     // 사용자명 입력
                     AppTextField(
                       controller: _usernameController,
-                      labelText: '관리자 아이디',
+                      label: '관리자 아이디',
                       hintText: '관리자 아이디를 입력하세요',
                       prefixIcon: const Icon(Icons.person),
                       validator: (value) {
@@ -103,7 +103,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                     // 비밀번호 입력
                     AppTextField(
                       controller: _passwordController,
-                      labelText: '비밀번호',
+                      label: '비밀번호',
                       hintText: '비밀번호를 입력하세요',
                       prefixIcon: const Icon(Icons.lock),
                       obscureText: true,
