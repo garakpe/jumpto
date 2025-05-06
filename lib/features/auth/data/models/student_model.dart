@@ -8,6 +8,8 @@ import '../../domain/entities/student.dart';
 class StudentModel extends Student {
   const StudentModel({
     required super.id,
+    super.authUid,
+    super.email,
     required super.name,
     required super.grade,
     required super.classNum,
@@ -18,6 +20,7 @@ class StudentModel extends Student {
     required super.schoolName,
     super.attendance = true,
     required super.createdAt,
+    super.updatedAt,
     super.password,
     super.gender,
   });
@@ -27,6 +30,8 @@ class StudentModel extends Student {
     final data = doc.data() as Map<String, dynamic>;
     return StudentModel(
       id: doc.id,
+      authUid: data['authUid'],
+      email: data['email'],
       name: data['name'] ?? '',
       grade: data['grade'] ?? '',
       classNum: data['classNum'] ?? '',
@@ -39,6 +44,9 @@ class StudentModel extends Student {
       createdAt: data['createdAt'] != null 
         ? (data['createdAt'] as Timestamp).toDate() 
         : DateTime.now(),
+      updatedAt: data['updatedAt'] != null
+        ? (data['updatedAt'] as Timestamp).toDate()
+        : null,
       // 비밀번호는 보안상 제외 (Firebase Auth에서 관리)
       gender: data['gender'],
     );
@@ -52,8 +60,13 @@ class StudentModel extends Student {
     final studentNum = map['studentNum']?.toString().padLeft(2, '0') ?? '';
     final studentId = '$grade$classNum$studentNum';
     
+    // 시스템 생성 이메일 형식: 학번@학교코드.school
+    final email = '$studentId@$schoolId.school';
+    
     return StudentModel(
       id: map['id'] ?? '', // Firestore에서 자동 생성될 ID
+      authUid: map['authUid'], // 나중에 생성될 Firebase Auth UID
+      email: email, // 시스템 생성 이메일
       name: map['name'] ?? '',
       grade: grade,
       classNum: classNum,
@@ -66,14 +79,14 @@ class StudentModel extends Student {
       createdAt: map['createdAt'] != null 
         ? (map['createdAt'] as Timestamp).toDate() 
         : DateTime.now(),
-      password: map['password'], // 초기 비밀번호 (업로드 시에만 사용)
+      password: map['password'] ?? '1234', // 초기 비밀번호 (업로드 시에만 사용)
       gender: map['gender'],
     );
   }
 
   /// Firestore에 저장할 Map 객체로 변환
   Map<String, dynamic> toFirestore() {
-    return {
+    final map = {
       'name': name,
       'grade': grade,
       'classNum': classNum,
@@ -83,16 +96,31 @@ class StudentModel extends Student {
       'schoolId': schoolId,
       'schoolName': schoolName,
       'attendance': attendance,
-      'createdAt': FieldValue.serverTimestamp(),
       'gender': gender,
-      // 비밀번호는 별도 처리 (Firebase Auth에서 관리)
+      'email': email,
+      // 업데이트 시에는 updatedAt 사용, 생성 시에는 createdAt 사용
+      'updatedAt': FieldValue.serverTimestamp(),
     };
+    
+    // id가 없는 경우 (새로 생성) createdAt 추가
+    if (id.isEmpty) {
+      map['createdAt'] = FieldValue.serverTimestamp();
+    }
+    
+    // authUid가 있는 경우에만 추가 (null이 아닐 때)
+    if (authUid != null) {
+      map['authUid'] = authUid;
+    }
+    
+    return map;
   }
 
   /// Entity를 Model로 변환
   factory StudentModel.fromEntity(Student entity) {
     return StudentModel(
       id: entity.id,
+      authUid: entity.authUid,
+      email: entity.email,
       name: entity.name,
       grade: entity.grade,
       classNum: entity.classNum,
@@ -103,6 +131,7 @@ class StudentModel extends Student {
       schoolName: entity.schoolName,
       attendance: entity.attendance,
       createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
       password: entity.password,
       gender: entity.gender,
     );

@@ -1,4 +1,26 @@
-# 온라인 팝스(PAPS) 교육 플랫폼 개발 계획
+### 최근 완료된 작업 (학생 인증 시스템 개선)
+
+- Student 엔티티 개선
+  - authUid 필드 추가 (Firebase Authentication UID 연결)
+  - email 필드 추가 (시스템 생성 이메일)
+  - updatedAt 필드 추가 (마지막 수정 일시)
+- StudentModel 개선
+  - 새로운 필드를 만들고 Firestore에 저장하는 로직 추가
+  - 시스템 생성 이메일 시스템 구현 (학번@학교코드.school 형식)
+- StudentRemoteDataSource 개선
+  - Firebase Authentication 연동 추가
+  - 학생 일괄 업로드 시 Firebase Authentication 계정 자동 생성
+  - 학생 성별 업데이트 기능 추가
+- Cloud Functions 구현
+  - createStudentAuthAccount: 학생 Firestore 문서 생성 시 Firebase Authentication 계정 자동 생성
+  - resetStudentPassword: 교사가 학생 비밀번호 초기화
+  - updateStudentGender: 학생 성별 정보 업데이트
+- CloudFunctionsService 구현
+  - Cloud Functions를 호출할 수 있는 서비스 클래스 구현
+  - 비밀번호 초기화 및 성별 업데이트 기능 포함
+- StudentCubit 개선
+  - UpdateStudentGender 유스케이스 통합
+  - 성별 업데이트 기능 추가# 온라인 팝스(PAPS) 교육 플랫폼 개발 계획
 
 ## 프로젝트 개요
 
@@ -11,6 +33,7 @@
 ### 완료된 작업
 
 - 콘텐츠 선택 화면 구현
+
   - ContentSelectionPage 생성
   - ContentCard 위젯 구현
   - 라우팅 수정 (로그인 후 콘텐츠 선택 화면으로 이동)
@@ -85,6 +108,7 @@
   - 타입 안전성(type safety) 개선
 
 - Firebase Hosting 설정 및 배포
+
   - firebase.json 파일 구성
   - 웹 앱 빌드 및 배포
 
@@ -137,23 +161,29 @@
 - 학생 관리 기능 구현
   - 학생 데이터 모델 통합 및 필드 명 표준화 ✅
     - Student 엔티티와 StudentModel에 gender 필드 추가 ✅
-    - 학생 관련 필드 명 통일 (className → classNum, studentNumber → studentNum/studentId 등) ✅
+    - 학생 관련 필드 명 통일 (className → classNum, studentNum → studentNum/studentId 등) ✅
   - 학생 마이페이지 비밀번호 재설정 기능 연결
 
 ### 다음 예정 작업
 
+- Cloud Functions 배포 및 테스트
+  - Firebase CLI를 이용한 함수 배포
+  - 학생 계정 자동 생성 및 비밀번호 초기화 테스트
+  - 성별 업데이트 기능 테스트
+- 학번(studentId)과 학생 번호(studentNum) 구분 확실한 적용
+  - 전체 프로젝트에서 일관된 용어 사용
+  - UI/UX에서 학생에게 표시되는 학번/학생번호 용어 통일
+- 학생 마이페이지 성별 선택 기능 구현
+  - StudentMyPage UI 화면에 성별 선택 메뉴 추가
+  - 성별 선택 및 저장 기능 구현
+- 교사 대시보드에 학생 비밀번호 초기화 기능 추가
+  - 학생 관리 화면에 비밀번호 초기화 버튼 추가
+  - 초기화 확인 모달 구현
 - 교사용 대시보드 나머지 탭 상세 기능 구현
   - 출석부 탭 기능 구현
   - 측정결과조회 탭 기능 구현
   - 평가 탭 기능 구현
   - 되돌아보기 탭 기능 구현
-- 교사 승인 기능 개선
-  - 자동 이메일 알림 기능 추가
-  - 학교, 학반 정보 관리 기능 추가
-- 학생 측정 결과 데이터 모델 및 저장소 구현
-- Firebase Firestore 데이터 구조 최적화
-- 성능 개선 및 오류 처리 강화
-- 교사 계정 관리 개선 (비밀번호 찾기, 정보 변경 기능)
 
 ### 발생한 문제점
 
@@ -164,6 +194,8 @@
 - 웹 배포 환경에서 에셋 파일(paps_standards.json) 로드 문제 ✅
 - 웹 환경에서 팝스 측정 기능 작동 안 함 ✅
 - 로그인 후 라우팅 문제: LoginPage와 RegisterPage에서 인증 성공 후 '/content-selection'으로 이동해야 하는데 '/home'으로 직접 이동하는 문제 ✅
+- student_remote_datasource.dart에서 FirebaseFunctions 임포트 누락 문제 ✅
+- sign_in_student.dart와 auth_repository.dart 간의 메서드 파라미터 불일치 문제 (studentNum vs studentId) ✅
 
 ### 새로 추가된 내용
 

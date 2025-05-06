@@ -28,9 +28,9 @@ class AuthLoading extends AuthState {}
 // 인증됨 상태
 class AuthAuthenticated extends AuthState {
   final User user;
-  
+
   AuthAuthenticated(this.user);
-  
+
   @override
   List<Object?> get props => [user];
 }
@@ -41,9 +41,9 @@ class AuthUnauthenticated extends AuthState {}
 // 오류 상태
 class AuthError extends AuthState {
   final String message;
-  
+
   AuthError(this.message);
-  
+
   @override
   List<Object?> get props => [message];
 }
@@ -55,10 +55,10 @@ class AuthCubit extends Cubit<AuthState> {
   final RegisterTeacher _registerTeacher;
   final SignInStudent _signInStudent;
   final SignOut _signOut;
-  
+
   // 인증 상태 스트림 구독
   StreamSubscription? _authStateSubscription;
-  
+
   AuthCubit({
     required SignInWithEmailPassword signInWithEmailPassword,
     required GetCurrentUser getCurrentUser,
@@ -73,13 +73,13 @@ class AuthCubit extends Cubit<AuthState> {
        super(AuthInitial()) {
     checkAuthState();
   }
-  
+
   /// 현재 인증 상태 확인
   Future<void> checkAuthState() async {
     emit(AuthLoading());
-    
+
     final result = await _getCurrentUser(NoParams());
-    
+
     result.fold(
       (failure) {
         emit(AuthError(_mapFailureToMessage(failure)));
@@ -95,18 +95,18 @@ class AuthCubit extends Cubit<AuthState> {
       },
     );
   }
-  
+
   /// 현재 사용자 정보 재로드
   Future<void> checkCurrentUser() async {
     // 현재 상태가 인증됨이 아닌 경우 실행하지 않음
     if (state is! AuthAuthenticated) {
       return;
     }
-    
+
     emit(AuthLoading());
-    
+
     final result = await _getCurrentUser(NoParams());
-    
+
     result.fold(
       (failure) {
         emit(AuthError(_mapFailureToMessage(failure)));
@@ -127,18 +127,18 @@ class AuthCubit extends Cubit<AuthState> {
       },
     );
   }
-  
+
   /// 이메일/비밀번호로 로그인
   Future<void> signInWithEmailPassword({
     required String email,
     required String password,
   }) async {
     emit(AuthLoading());
-    
+
     final result = await _signInWithEmailPassword(
       SignInParams(email: email, password: password),
     );
-    
+
     result.fold(
       (failure) {
         emit(AuthError(_mapFailureToMessage(failure)));
@@ -150,7 +150,7 @@ class AuthCubit extends Cubit<AuthState> {
       },
     );
   }
-  
+
   /// 교사 회원가입
   Future<void> registerTeacher({
     required String email,
@@ -160,7 +160,7 @@ class AuthCubit extends Cubit<AuthState> {
     String? phoneNumber,
   }) async {
     emit(AuthLoading());
-    
+
     final result = await _registerTeacher(
       RegisterTeacherParams(
         email: email,
@@ -170,7 +170,7 @@ class AuthCubit extends Cubit<AuthState> {
         phoneNumber: phoneNumber,
       ),
     );
-    
+
     result.fold(
       (failure) {
         emit(AuthError(_mapFailureToMessage(failure)));
@@ -182,23 +182,23 @@ class AuthCubit extends Cubit<AuthState> {
       },
     );
   }
-  
+
   /// 학생 로그인
   Future<void> signInStudent({
     required String schoolId,
-    required String studentNumber,
+    required String studentId,
     required String password,
   }) async {
     emit(AuthLoading());
-    
+
     final result = await _signInStudent(
       SignInStudentParams(
         schoolId: schoolId,
-        studentNumber: studentNumber,
+        studentId: studentId,
         password: password,
       ),
     );
-    
+
     result.fold(
       (failure) {
         emit(AuthError(_mapFailureToMessage(failure)));
@@ -214,9 +214,9 @@ class AuthCubit extends Cubit<AuthState> {
   /// 로그아웃
   Future<void> signOut() async {
     emit(AuthLoading());
-    
+
     final result = await _signOut(NoParams());
-    
+
     result.fold(
       (failure) {
         emit(AuthError(_mapFailureToMessage(failure)));
@@ -227,13 +227,13 @@ class AuthCubit extends Cubit<AuthState> {
       },
     );
   }
-  
+
   @override
   Future<void> close() {
     _authStateSubscription?.cancel();
     return super.close();
   }
-  
+
   /// 실패 유형에 따른 오류 메시지 반환
   String _mapFailureToMessage(Failure failure) {
     switch (failure.runtimeType) {

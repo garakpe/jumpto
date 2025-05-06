@@ -17,14 +17,14 @@ class _TeacherLoginFormState extends State<TeacherLoginForm> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  
+
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Form(
@@ -62,16 +62,12 @@ class _TeacherLoginFormState extends State<TeacherLoginForm> {
             },
           ),
           const SizedBox(height: 24),
-          AppButton(
-            text: '로그인',
-            onPressed: _login,
-            icon: Icons.login,
-          ),
+          AppButton(text: '로그인', onPressed: _login, icon: Icons.login),
         ],
       ),
     );
   }
-  
+
   void _login() {
     if (_formKey.currentState!.validate()) {
       context.read<AuthCubit>().signInWithEmailPassword(
@@ -93,17 +89,17 @@ class StudentLoginForm extends StatefulWidget {
 class _StudentLoginFormState extends State<StudentLoginForm> {
   final _formKey = GlobalKey<FormState>();
   final _schoolIdController = TextEditingController();
-  final _studentNumberController = TextEditingController();
+  final _studentNumController = TextEditingController();
   final _passwordController = TextEditingController();
-  
+
   @override
   void dispose() {
     _schoolIdController.dispose();
-    _studentNumberController.dispose();
+    _studentNumController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Form(
@@ -126,7 +122,7 @@ class _StudentLoginFormState extends State<StudentLoginForm> {
           AppTextField(
             label: '학번',
             hintText: '학번을 입력하세요',
-            controller: _studentNumberController,
+            controller: _studentNumController,
             keyboardType: TextInputType.number,
             prefixIcon: const Icon(Icons.person),
             validator: (value) {
@@ -151,31 +147,25 @@ class _StudentLoginFormState extends State<StudentLoginForm> {
             },
           ),
           const SizedBox(height: 24),
-          AppButton(
-            text: '로그인',
-            onPressed: _login,
-            icon: Icons.login,
-          ),
+          AppButton(text: '로그인', onPressed: _login, icon: Icons.login),
         ],
       ),
     );
   }
-  
+
   void _login() {
     if (_formKey.currentState!.validate()) {
       // 학생 로그인 기능 구현 예정
       // context.read<AuthCubit>().signInStudent(
       //   schoolId: _schoolIdController.text.trim(),
-      //   studentNumber: _studentNumberController.text.trim(),
+      //   studentNum: _studentNumController.text.trim(),
       //   password: _passwordController.text,
       // );
-      
+
       // 현재는 알림만 표시
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('학생 로그인 기능은 아직 구현 중입니다.'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('학생 로그인 기능은 아직 구현 중입니다.')));
     }
   }
 }

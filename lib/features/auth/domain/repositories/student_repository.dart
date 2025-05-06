@@ -36,4 +36,7 @@ abstract class StudentRepository {
   
   /// 학생 계정 삭제
   Future<Either<Failure, void>> deleteStudent(String id);
+  
+  /// 학생 성별 업데이트
+  Future<Either<Failure, void>> updateStudentGender(String gender);
 }

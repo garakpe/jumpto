@@ -10,7 +10,7 @@ import '../widgets/login_form.dart';
 import '../widgets/login_header.dart';
 
 /// 로그인 화면
-/// 
+///
 /// 사용자가 이메일과 비밀번호로 로그인할 수 있는 화면입니다.
 /// 교사와 학생 로그인 방식을 모두 지원합니다.
 class LoginPage extends StatefulWidget {
@@ -23,22 +23,22 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   // 로그인 타입 구분 (교사/학생)
   bool _isTeacherLogin = true;
-  
+
   // 폼 키
   final _formKey = GlobalKey<FormState>();
-  
+
   // 컨트롤러
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _schoolIdController = TextEditingController();
-  final _studentNumberController = TextEditingController();
-  
+  final _studentIdController = TextEditingController();
+
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     _schoolIdController.dispose();
-    _studentNumberController.dispose();
+    _studentIdController.dispose();
     super.dispose();
   }
 
@@ -65,7 +65,7 @@ class _LoginPageState extends State<LoginPage> {
           if (state is AuthLoading) {
             return const LoadingView(message: '로그인 중...');
           }
-          
+
           return SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -77,7 +77,7 @@ class _LoginPageState extends State<LoginPage> {
                     // 로그인 헤더 (로고, 제목)
                     const LoginHeader(),
                     const SizedBox(height: 32),
-                    
+
                     // 로그인 타입 선택 (교사/학생)
                     SegmentedButton<bool>(
                       segments: const [
@@ -100,15 +100,16 @@ class _LoginPageState extends State<LoginPage> {
                       },
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // 로그인 폼
                     Form(
                       key: _formKey,
-                      child: _isTeacherLogin 
-                          ? _buildTeacherLoginForm() 
-                          : _buildStudentLoginForm(),
+                      child:
+                          _isTeacherLogin
+                              ? _buildTeacherLoginForm()
+                              : _buildStudentLoginForm(),
                     ),
-                    
+
                     // 회원가입 안내
                     if (_isTeacherLogin) ...[
                       const SizedBox(height: 16),
@@ -132,7 +133,7 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
-  
+
   // 교사 로그인 폼
   Widget _buildTeacherLoginForm() {
     return Column(
@@ -168,15 +169,11 @@ class _LoginPageState extends State<LoginPage> {
           },
         ),
         const SizedBox(height: 24),
-        AppButton(
-          text: '로그인',
-          onPressed: _onTeacherLogin,
-          icon: Icons.login,
-        ),
+        AppButton(text: '로그인', onPressed: _onTeacherLogin, icon: Icons.login),
       ],
     );
   }
-  
+
   // 학생 로그인 폼
   Widget _buildStudentLoginForm() {
     return Column(
@@ -197,7 +194,7 @@ class _LoginPageState extends State<LoginPage> {
         AppTextField(
           label: '학번',
           hintText: '학번을 입력하세요',
-          controller: _studentNumberController,
+          controller: _studentIdController,
           keyboardType: TextInputType.number,
           prefixIcon: const Icon(Icons.person),
           validator: (value) {
@@ -222,15 +219,11 @@ class _LoginPageState extends State<LoginPage> {
           },
         ),
         const SizedBox(height: 24),
-        AppButton(
-          text: '로그인',
-          onPressed: _onStudentLogin,
-          icon: Icons.login,
-        ),
+        AppButton(text: '로그인', onPressed: _onStudentLogin, icon: Icons.login),
       ],
     );
   }
-  
+
   // 교사 로그인 처리
   void _onTeacherLogin() {
     if (_formKey.currentState!.validate()) {
@@ -240,13 +233,13 @@ class _LoginPageState extends State<LoginPage> {
       );
     }
   }
-  
+
   // 학생 로그인 처리
   void _onStudentLogin() {
     if (_formKey.currentState!.validate()) {
       context.read<AuthCubit>().signInStudent(
         schoolId: _schoolIdController.text.trim(),
-        studentNumber: _studentNumberController.text.trim(),
+        studentId: _studentIdController.text.trim(),
         password: _passwordController.text,
       );
     }

@@ -43,12 +43,15 @@ class FirebaseDataSeed {
           );
 
           // Firestore에 교사 정보 저장
-          await _firestore.collection('users').doc(userCredential.user!.uid).set({
-            'email': email,
-            'displayName': displayName,
-            'isTeacher': true,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
+          await _firestore
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .set({
+                'email': email,
+                'displayName': displayName,
+                'isTeacher': true,
+                'createdAt': FieldValue.serverTimestamp(),
+              });
 
           // 로그아웃
           await _auth.signOut();
@@ -69,7 +72,7 @@ class FirebaseDataSeed {
     const password = 'student123';
     const displayName = '테스트 학생';
     const schoolId = 'school1';
-    const studentNumber = '1';
+    const studentNum = '1';
 
     try {
       // 이미 존재하는지 확인
@@ -92,24 +95,30 @@ class FirebaseDataSeed {
           );
 
           // Firestore에 학생 정보 저장
-          await _firestore.collection('users').doc(userCredential.user!.uid).set({
-            'email': email,
-            'displayName': displayName,
-            'isTeacher': false,
-            'schoolId': schoolId,
-            'studentNumber': studentNumber,
-            'grade': 1,
-            'gender': 'male',
-            'createdAt': FieldValue.serverTimestamp(),
-          });
+          await _firestore
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .set({
+                'email': email,
+                'displayName': displayName,
+                'isTeacher': false,
+                'schoolId': schoolId,
+                'studentNum': studentNum,
+                'grade': 1,
+                'gender': 'male',
+                'createdAt': FieldValue.serverTimestamp(),
+              });
 
           // 학교 및 학생 맵핑 정보 저장
-          await _firestore.collection('school_students').doc('$schoolId-$studentNumber').set({
-            'userId': userCredential.user!.uid,
-            'schoolId': schoolId,
-            'studentNumber': studentNumber,
-            'email': email,
-          });
+          await _firestore
+              .collection('school_students')
+              .doc('$schoolId-$studentNum')
+              .set({
+                'userId': userCredential.user!.uid,
+                'schoolId': schoolId,
+                'studentNum': studentNum,
+                'email': email,
+              });
 
           // 로그아웃
           await _auth.signOut();

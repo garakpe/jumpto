@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/firebase/admin_seed.dart';
+import '../core/firebase/cloud_functions_service.dart';
 import '../core/network/network_info.dart';
 import '../core/usecases/usecase.dart';
 import '../features/admin/data/datasources/admin_remote_data_source.dart';
@@ -27,6 +29,7 @@ import '../features/auth/domain/usecases/register_teacher.dart';
 import '../features/auth/domain/usecases/sign_in_student.dart';
 import '../features/auth/domain/usecases/sign_in_with_email_password.dart';
 import '../features/auth/domain/usecases/sign_out.dart';
+import '../features/auth/domain/usecases/update_student_gender.dart';
 import '../features/auth/domain/usecases/upload_students.dart';
 import '../features/auth/presentation/cubit/auth_cubit.dart';
 import '../features/auth/presentation/cubit/student_cubit.dart';
@@ -58,7 +61,9 @@ Future<void> init() async {
   // External
   sl.registerLazySingleton<FirebaseFirestore>(() => FirebaseFirestore.instance);
   sl.registerLazySingleton<FirebaseAuth>(() => FirebaseAuth.instance);
+  sl.registerLazySingleton<FirebaseFunctions>(() => FirebaseFunctions.instance);
   sl.registerLazySingleton<Connectivity>(() => Connectivity());
+  sl.registerLazySingleton<CloudFunctionsService>(() => CloudFunctionsService(functions: sl()));
   
   // SharedPreferences
   final sharedPreferences = await SharedPreferences.getInstance();
@@ -102,7 +107,7 @@ Future<void> init() async {
   // Features - Students
   // Data Sources
   sl.registerLazySingleton<StudentRemoteDataSource>(
-    () => StudentRemoteDataSourceImpl(firestore: sl()),
+    () => StudentRemoteDataSourceImpl(firestore: sl(), auth: sl()),
   );
   
   // Repositories
@@ -113,6 +118,7 @@ Future<void> init() async {
   // Use Cases
   sl.registerLazySingleton(() => GetStudentsByTeacher(sl()));
   sl.registerLazySingleton(() => UploadStudents(sl()));
+  sl.registerLazySingleton(() => UpdateStudentGender(sl()));
   
   // BLoC
   sl.registerFactory(
@@ -120,6 +126,7 @@ Future<void> init() async {
       getStudentsByTeacher: sl(),
       uploadStudents: sl(),
       getCurrentUser: sl(),
+      updateStudentGender: sl(),
     ),
   );
   

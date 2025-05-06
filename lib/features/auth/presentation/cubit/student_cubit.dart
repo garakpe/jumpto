@@ -10,6 +10,7 @@ import '../../../../core/error/failures.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../../domain/entities/student.dart';
 import '../../domain/usecases/get_students_by_teacher.dart';
+import '../../domain/usecases/update_student_gender.dart';
 import '../../domain/usecases/upload_students.dart';
 import '../../domain/entities/user.dart';
 import '../../../auth/domain/usecases/get_current_user.dart';
@@ -80,14 +81,17 @@ class StudentCubit extends Cubit<StudentState> {
   final GetStudentsByTeacher _getStudentsByTeacher;
   final UploadStudents _uploadStudents;
   final GetCurrentUser _getCurrentUser;
+  final UpdateStudentGender _updateStudentGender;
 
   StudentCubit({
     required GetStudentsByTeacher getStudentsByTeacher,
     required UploadStudents uploadStudents,
     required GetCurrentUser getCurrentUser,
+    required UpdateStudentGender updateStudentGender,
   }) : _getStudentsByTeacher = getStudentsByTeacher,
        _uploadStudents = uploadStudents,
        _getCurrentUser = getCurrentUser,
+       _updateStudentGender = updateStudentGender,
        super(StudentInitial());
 
   /// 현재 교사가 담당하는 학생 목록 조회
@@ -435,5 +439,32 @@ class StudentCubit extends Cubit<StudentState> {
     // 필요하다면 추가 가능
 
     return true;
+  }
+  
+  /// 학생 성별 업데이트
+  Future<void> updateGender(String gender) async {
+    try {
+      emit(StudentLoading()); // 로딩 상태 시작
+      
+      // 성별 유효성 검사 ("남" 또는 "여"만 허용)
+      if (gender != '남' && gender != '여') {
+        emit(StudentError(message: '유효하지 않은 성별입니다. ("남" 또는 "여"만 가능)'));
+        return;
+      }
+      
+      // 업데이트 요청 전송
+      final result = await _updateStudentGender(UpdateStudentGenderParams(gender: gender));
+      
+      // 결과 처리
+      result.fold(
+        (failure) => emit(StudentError(message: failure.message)),
+        (_) async {
+          // 성공 시, 학생 리스트를 다시 가져와서 화면 새로고침
+          await loadStudents();
+        },
+      );
+    } catch (e) {
+      emit(StudentError(message: '성별 업데이트 중 오류가 발생했습니다: $e'));
+    }
   }
 }

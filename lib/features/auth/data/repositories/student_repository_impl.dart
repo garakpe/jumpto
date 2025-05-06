@@ -137,4 +137,16 @@ class StudentRepositoryImpl implements StudentRepository {
       return Left(ServerFailure(message: '학생 삭제 중 오류가 발생했습니다.'));
     }
   }
+  
+  @override
+  Future<Either<Failure, void>> updateStudentGender(String gender) async {
+    try {
+      await remoteDataSource.updateStudentGender(gender);
+      return const Right(null);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      return Left(ServerFailure(message: '성별 업데이트 중 오류가 발생했습니다.'));
+    }
+  }
 }
