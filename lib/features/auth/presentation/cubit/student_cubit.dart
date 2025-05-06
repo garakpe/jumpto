@@ -330,7 +330,7 @@ class StudentCubit extends Cubit<StudentState> {
       // Excel 4.0.6에서는 시트 가져오는 방법이 다름
       final defaultSheetName = excel.getDefaultSheet()!;
       final sheet = excel.sheets[defaultSheetName]!;
-      excel.rename(sheet as String, '학생명단'); // rename 메서드 사용
+      excel.rename(defaultSheetName, '학생명단'); // 시트 객체가 아닌 시트 이름만 전달
 
       // 헤더 추가 (최신 excel 패키지는 CellValue 클래스를 사용)
       sheet
@@ -349,38 +349,35 @@ class StudentCubit extends Cubit<StudentState> {
           .cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 0))
           .value = TextCellValue('초기비밀번호 (선택, 기본값 1234)'); // 설명 추가
 
-      // 샘플 데이터 추가 (숫자는 숫자 타입으로, 문자는 문자 타입으로)
-      sheet
-          .cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1))
-          .value = IntCellValue(1); // 숫자
-      sheet
-          .cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 1))
-          .value = IntCellValue(1); // 숫자
-      sheet
-          .cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: 1))
-          .value = IntCellValue(1); // 숫자
-      sheet
-          .cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 1))
-          .value = TextCellValue('홍길동'); // 문자
-      sheet
-          .cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 1))
-          .value = TextCellValue('1234'); // 문자 (비밀번호는 문자열)
+      // 샘플 데이터 추가 - 첫 번째 행
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1)).value = IntCellValue(1);
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 1)).value = IntCellValue(1);
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: 1)).value = IntCellValue(1);
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 1)).value = TextCellValue('김민준');
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 1)).value = TextCellValue('1234');
+      
+      // 샘플 데이터 추가 - 두 번째 행
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 2)).value = IntCellValue(1);
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 2)).value = IntCellValue(1);
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: 2)).value = IntCellValue(2);
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 2)).value = TextCellValue('이서연');
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 2)).value = TextCellValue('1234');
+      
+      // 샘플 데이터 추가 - 세 번째 행
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 3)).value = IntCellValue(1);
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 3)).value = IntCellValue(2);
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: 3)).value = IntCellValue(1);
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 3)).value = TextCellValue('박지원');
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 3)).value = TextCellValue('1234');
 
       // Excel 4.0.6에서는 setColumnAutoFit 메서드를 사용
       // 각 열의 너비를 쉘에 맞게 자동 조절
-      try {
-        sheet.setColumnAutoFit(0);
-        sheet.setColumnAutoFit(1);
-        sheet.setColumnAutoFit(2);
-        sheet.setColumnAutoFit(3);
-        sheet.setColumnAutoFit(4);
-      } catch (e) {
-        print('열 너비 자동 조절 실패: $e');
-        // 실패할 경우 고정 너비를 설정
-        for (int i = 0; i < 5; i++) {
-          sheet.setColumnWidth(i, 15.0);
-        }
-      }
+      // 열 너비를 더 넓게 설정
+      sheet.setColumnWidth(0, 12.0); // 학년
+      sheet.setColumnWidth(1, 12.0); // 반
+      sheet.setColumnWidth(2, 12.0); // 번호
+      sheet.setColumnWidth(3, 20.0); // 이름
+      sheet.setColumnWidth(4, 25.0); // 초기비밀번호
 
       // 엑셀 파일을 바이트 배열로 변환
       // encode() 메서드는 List<int>? 를 반환하므로 Uint8List로 변환 필요

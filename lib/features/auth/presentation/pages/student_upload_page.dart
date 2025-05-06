@@ -3,8 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:typed_data';
 import 'package:go_router/go_router.dart';
+import 'package:universal_html/html.dart' as html;
 
 import '../../../../core/presentation/widgets/loading_view.dart';
+import '../../../../core/util/excel_helper.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../cubit/student_cubit.dart';
 
@@ -242,25 +244,15 @@ class _StudentUploadPageState extends State<StudentUploadPage> {
         _statusMessage = '템플릿 파일 생성 중...';
       });
 
-      // StudentCubit을 통해 템플릿 생성
-      final Uint8List? bytes =
-          await context.read<StudentCubit>().createExcelTemplate();
-
-      // FilePicker를 통해 파일 저장
-      String? outputFile = await FilePicker.platform.saveFile(
-        dialogTitle: '엑셀 템플릿 저장',
-        fileName: '학생명단_템플릿.xlsx',
-      );
-
-      if (outputFile != null) {
-        // TODO: 파일 저장 로직 구현 (웹 환경에서는 자동 다운로드됨)
-        _statusMessage = '템플릿 파일이 다운로드되었습니다. 데이터를 입력한 후 업로드해주세요.';
-      } else {
-        _statusMessage = '템플릿 다운로드가 취소되었습니다.';
-      }
-
+      // ExcelHelper를 사용하여 템플릿 생성
+      final Uint8List bytes = ExcelHelper.createStudentExcelTemplate();
+      
+      // 웹 환경에서 직접 다운로드 실행
+      ExcelHelper.downloadForWeb(bytes, '학생명단_템플릿.xlsx');
+      
       setState(() {
         _isDownloading = false;
+        _statusMessage = '템플릿 파일이 다운로드되었습니다. 데이터를 입력한 후 업로드해주세요.';
       });
     } catch (e) {
       setState(() {
@@ -269,6 +261,8 @@ class _StudentUploadPageState extends State<StudentUploadPage> {
       });
     }
   }
+  
+
 
   /// 엑셀 파일 선택 및 처리
   Future<void> _pickExcelFile() async {
