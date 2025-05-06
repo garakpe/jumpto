@@ -9,8 +9,8 @@ class UserModel extends User {
     required super.displayName,
     required super.role,
     super.schoolId,
-    super.classId,
-    super.studentNumber,
+    super.classNum,
+    super.studentNum,
     super.gender,
   });
 
@@ -25,8 +25,8 @@ class UserModel extends User {
       displayName: json['displayName'] as String? ?? '',
       role: role,
       schoolId: json['schoolId'] as String?,
-      classId: json['classId'] as String?,
-      studentNumber: json['studentNumber'] as String?,
+      classNum: json['classId'] as String?,
+      studentNum: json['studentNumber'] as String?,
       gender: json['gender'] as String?,
     );
   }
@@ -39,8 +39,8 @@ class UserModel extends User {
       'displayName': displayName,
       'role': role == UserRole.teacher ? 'teacher' : 'student',
       'schoolId': schoolId,
-      'classId': classId,
-      'studentNumber': studentNumber,
+      'classId': classNum,
+      'studentNumber': studentNum,
       'gender': gender,
     };
   }
@@ -60,8 +60,8 @@ class UserModel extends User {
       role: role,
       displayName: userData['displayName'] as String? ?? '',
       schoolId: userData['schoolId'] as String?,
-      classId: userData['classId'] as String?,
-      studentNumber: userData['studentNumber'] as String?,
+      classNum: userData['classId'] as String?,
+      studentNum: userData['studentNumber'] as String?,
       gender: userData['gender'] as String?,
     );
   }
@@ -74,8 +74,8 @@ class UserModel extends User {
       displayName: user.displayName,
       role: user.role,
       schoolId: user.schoolId,
-      classId: user.classId,
-      studentNumber: user.studentNumber,
+      classNum: user.classNum,
+      studentNum: user.studentNum,
       gender: user.gender,
     );
   }

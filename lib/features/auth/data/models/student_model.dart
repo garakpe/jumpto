@@ -19,6 +19,7 @@ class StudentModel extends Student {
     super.attendance = true,
     required super.createdAt,
     super.password,
+    super.gender,
   });
 
   /// Firestore 문서에서 StudentModel 생성
@@ -39,6 +40,7 @@ class StudentModel extends Student {
         ? (data['createdAt'] as Timestamp).toDate() 
         : DateTime.now(),
       // 비밀번호는 보안상 제외 (Firebase Auth에서 관리)
+      gender: data['gender'],
     );
   }
 
@@ -65,6 +67,7 @@ class StudentModel extends Student {
         ? (map['createdAt'] as Timestamp).toDate() 
         : DateTime.now(),
       password: map['password'], // 초기 비밀번호 (업로드 시에만 사용)
+      gender: map['gender'],
     );
   }
 
@@ -81,6 +84,7 @@ class StudentModel extends Student {
       'schoolName': schoolName,
       'attendance': attendance,
       'createdAt': FieldValue.serverTimestamp(),
+      'gender': gender,
       // 비밀번호는 별도 처리 (Firebase Auth에서 관리)
     };
   }
@@ -100,6 +104,7 @@ class StudentModel extends Student {
       attendance: entity.attendance,
       createdAt: entity.createdAt,
       password: entity.password,
+      gender: entity.gender,
     );
   }
 }

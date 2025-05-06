@@ -1,5 +1,35 @@
 # 개발 로그
 
+## 2025년 5월 6일
+
+### 학생 데이터 모델 통합 및 필드 명 표준화
+
+#### 작업 내용
+- Student 엔티티와 StudentModel 클래스에 gender 필드 추가
+- 다양한 학생 관련 클래스를 StudentModel로 통합
+- gender 필드를 Firestore에 저장할 수 있도록 toFirestore() 메서드 업데이트
+- 기존 학생 관련 메서드(fromFirestore, fromMap, fromEntity)도 gender 필드를 지원하도록 수정
+- 학생 관련 필드 명 표준화
+  - auth_remote_data_source.dart 파일의 className → classNum으로 변경
+  - auth_remote_data_source.dart 파일의 studentNumber → studentNum/studentId로 변경
+  - User 엔티티의 classId → classNum으로 변경
+  - User 엔티티의 studentNumber → studentNum으로 변경
+  - User 엔티티에 studentId 필드 추가
+
+#### 수정된 파일
+- `/lib/features/auth/domain/entities/student.dart`
+- `/lib/features/auth/data/models/student_model.dart`
+- `/lib/features/auth/domain/entities/user.dart`
+- `/lib/features/auth/data/datasources/auth_remote_data_source.dart`
+
+#### 개선 효과
+- 학생 성별에 따른 PAPS 기준표 조회 및 등급 산출 기능 구현 가능
+- 학생 데이터 모델의 일관성 확보
+- 필드 명 표준화로 코드의 가독성 및 유지보수성 향상
+- 전체 시스템에서 일관된 용어 사용으로 혼동 방지
+- 향후 새로운 기능 개발 시 출돌 위험 최소화
+- 클린 아키텍처 원칙에 따른 코드 구조 개선
+
 ## 2025년 5월 4일
 
 ### 웹 환경 팝스 측정 기능 문제 해결

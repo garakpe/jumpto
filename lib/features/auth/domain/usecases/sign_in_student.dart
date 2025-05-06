@@ -9,17 +9,17 @@ import '../repositories/auth_repository.dart';
 /// 학생 로그인을 위한 파라미터
 class SignInStudentParams extends Equatable {
   final String schoolId;
-  final String studentNumber;
+  final String studentNum;
   final String password;
 
-  SignInStudentParams({
+  const SignInStudentParams({
     required this.schoolId,
-    required this.studentNumber,
+    required this.studentNum,
     required this.password,
   });
 
   @override
-  List<Object?> get props => [schoolId, studentNumber, password];
+  List<Object?> get props => [schoolId, studentNum, password];
 }
 
 /// 학생 로그인 유스케이스
@@ -32,7 +32,7 @@ class SignInStudent implements UseCase<User, SignInStudentParams> {
   Future<Either<Failure, User>> call(SignInStudentParams params) {
     return _repository.signInStudent(
       schoolId: params.schoolId,
-      studentNumber: params.studentNumber,
+      studentNum: params.studentNum,
       password: params.password,
     );
   }

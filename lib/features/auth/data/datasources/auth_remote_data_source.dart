@@ -20,8 +20,8 @@ abstract class AuthRemoteDataSource {
   /// 학생 계정 생성 (교사에 의해)
   Future<domain.User> createStudentAccount({
     required String displayName,
-    required String studentNumber,
-    required String className,
+    required String studentNum,
+    required String classNum,
     required String gender,
     String? initialPassword,
   });
@@ -35,7 +35,7 @@ abstract class AuthRemoteDataSource {
   /// 학번/비밀번호로 학생 로그인
   Future<domain.User> signInStudent({
     required String schoolId,
-    required String studentNumber,
+    required String studentId,
     required String password,
   });
 
@@ -112,8 +112,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         displayName: userData['displayName'],
         role: role,
         schoolId: userData['schoolId'],
-        classId: userData['classId'],
-        studentNumber: userData['studentNumber'],
+        classNum: userData['classNum'],
+        studentNum: userData['studentNum'],
+        studentId: userData['studentId'],
         gender: userData['gender'],
         phoneNumber: userData['phoneNumber'],
         isApproved: isApproved, // isApproved 필드 추가
@@ -169,8 +170,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<domain.User> createStudentAccount({
     required String displayName,
-    required String studentNumber,
-    required String className,
+    required String studentNum,
+    required String classNum,
     required String gender,
     String? initialPassword,
   }) async {
@@ -194,10 +195,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final schoolId = teacherData['schoolId'];
 
       // 비밀번호 설정 (기본값: 학번)
-      final password = initialPassword ?? studentNumber;
+      final password = initialPassword ?? studentNum;
 
-      // 학생 이메일 형식 (예: schoolId-className-studentNumber@school.com)
-      final studentEmail = '$schoolId-$className-$studentNumber@school.com';
+      // 학생 이메일 형식 (예: schoolId-classNum-studentNum@school.com)
+      final studentEmail = '$schoolId-$classNum-$studentNum@school.com';
 
       // Firebase Auth로 학생 계정 생성
       final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
@@ -213,8 +214,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'displayName': displayName,
         'role': 'student',
         'schoolId': schoolId,
-        'classId': className,
-        'studentNumber': studentNumber,
+        'classNum': classNum,
+        'studentNum': studentNum,
+        'studentId': '$classNum$studentNum',
         'gender': gender,
         'teacherId': teacherId,
         'createdAt': FieldValue.serverTimestamp(),
@@ -225,8 +227,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'email': studentEmail,
         'displayName': displayName,
         'schoolId': schoolId,
-        'classId': className,
-        'studentNumber': studentNumber,
+        'classNum': classNum,
+        'studentNum': studentNum,
+        'studentId': '$classNum$studentNum',
         'gender': gender,
         'teacherId': teacherId,
         'createdAt': FieldValue.serverTimestamp(),
@@ -239,8 +242,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         displayName: displayName,
         role: domain.UserRole.student,
         schoolId: schoolId,
-        classId: className,
-        studentNumber: studentNumber,
+        classNum: classNum,
+        studentNum: studentNum,
+        studentId: '$classNum$studentNum',
         gender: gender,
       );
     } catch (e) {
@@ -288,7 +292,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<domain.User> signInStudent({
     required String schoolId,
-    required String studentNumber,
+    required String studentId,
     required String password,
   }) async {
     try {
@@ -297,7 +301,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final query =
           await _studentsCollection
               .where('schoolId', isEqualTo: schoolId)
-              .where('studentNumber', isEqualTo: studentNumber)
+              .where('studentId', isEqualTo: studentId)
               .get();
 
       if (query.docs.isEmpty) {

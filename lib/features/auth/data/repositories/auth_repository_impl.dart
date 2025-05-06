@@ -9,9 +9,9 @@ import '../datasources/auth_remote_data_source.dart';
 /// 인증 레포지토리 구현체
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource _remoteDataSource;
-  
+
   AuthRepositoryImpl(this._remoteDataSource);
-  
+
   @override
   Future<Either<Failure, User?>> getCurrentUser() async {
     try {
@@ -21,7 +21,7 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(_handleError(e));
     }
   }
-  
+
   @override
   Future<Either<Failure, User>> signUpTeacher({
     required String email,
@@ -43,20 +43,20 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(_handleError(e));
     }
   }
-  
+
   @override
   Future<Either<Failure, User>> createStudentAccount({
     required String displayName,
-    required String studentNumber,
-    required String className,
+    required String studentNum,
+    required String classNum,
     required String gender,
     String? initialPassword,
   }) async {
     try {
       final user = await _remoteDataSource.createStudentAccount(
         displayName: displayName,
-        studentNumber: studentNumber,
-        className: className,
+        studentNum: studentNum,
+        classNum: classNum,
         gender: gender,
         initialPassword: initialPassword,
       );
@@ -65,7 +65,7 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(_handleError(e));
     }
   }
-  
+
   @override
   Future<Either<Failure, User>> signInWithEmailPassword({
     required String email,
@@ -81,17 +81,17 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(_handleError(e));
     }
   }
-  
+
   @override
   Future<Either<Failure, User>> signInStudent({
     required String schoolId,
-    required String studentNumber,
+    required String studentNum,
     required String password,
   }) async {
     try {
       final user = await _remoteDataSource.signInStudent(
         schoolId: schoolId,
-        studentNumber: studentNumber,
+        studentNum: studentNum,
         password: password,
       );
       return Right(user);
@@ -99,7 +99,7 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(_handleError(e));
     }
   }
-  
+
   @override
   Future<Either<Failure, void>> signOut() async {
     try {
@@ -109,7 +109,7 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(_handleError(e));
     }
   }
-  
+
   @override
   Future<Either<Failure, void>> sendPasswordResetEmail(String email) async {
     try {
@@ -119,7 +119,7 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(_handleError(e));
     }
   }
-  
+
   @override
   Future<Either<Failure, void>> changePassword({
     required String oldPassword,
@@ -135,7 +135,7 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(_handleError(e));
     }
   }
-  
+
   @override
   Future<Either<Failure, void>> resetStudentPassword({
     required String studentId,
@@ -151,10 +151,10 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(_handleError(e));
     }
   }
-  
+
   @override
   Stream<User?> get authStateChanges => _remoteDataSource.authStateChanges;
-  
+
   /// 오류 처리
   Failure _handleError(dynamic exception) {
     if (exception is firebase_auth.FirebaseAuthException) {
@@ -166,7 +166,7 @@ class AuthRepositoryImpl implements AuthRepository {
       return UnknownFailure(message: exception.toString());
     }
   }
-  
+
   /// Firebase Auth 오류 메시지
   String _getAuthErrorMessage(String code) {
     switch (code) {

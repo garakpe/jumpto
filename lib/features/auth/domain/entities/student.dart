@@ -40,6 +40,9 @@ class Student extends Equatable {
   /// 비밀번호 (초기 비밀번호 설정 용도)
   final String? password;
 
+  /// 성별 ("남"/"여")
+  final String? gender;
+
   const Student({
     required this.id,
     required this.name,
@@ -53,12 +56,13 @@ class Student extends Equatable {
     this.attendance = true,
     required this.createdAt,
     this.password,
+    this.gender,
   });
 
   @override
   List<Object?> get props => [
     id, name, grade, classNum, studentNum, 
     studentId, teacherId, schoolId, schoolName,
-    attendance, createdAt
+    attendance, createdAt, gender
   ];
 }

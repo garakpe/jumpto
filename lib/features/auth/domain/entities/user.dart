@@ -31,11 +31,14 @@ class User {
   /// 학교 ID (선택)
   final String? schoolId;
   
-  /// 학급 ID (선택)
-  final String? classId;
+  /// 학반 (선택)
+  final String? classNum;
   
-  /// 학번 (학생인 경우)
-  final String? studentNumber;
+  /// 학생 번호 (학생인 경우)
+  final String? studentNum;
+  
+  /// 학번 (학생인 경우, classNum + studentNum)
+  final String? studentId;
   
   /// 성별 (학생인 경우)
   final String? gender;
@@ -53,8 +56,9 @@ class User {
     required this.displayName,
     required this.role,
     this.schoolId,
-    this.classId,
-    this.studentNumber,
+    this.classNum,
+    this.studentNum,
+    this.studentId,
     this.gender,
     this.phoneNumber,
     this.isApproved = false,

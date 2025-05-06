@@ -99,7 +99,7 @@ class _StudentMyPageState extends State<StudentMyPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '학번: ${user.studentNumber ?? ""}',
+                          '학번: ${user.studentNum ?? ""}',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         const SizedBox(height: 4),

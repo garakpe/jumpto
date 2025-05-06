@@ -114,6 +114,9 @@
   - StudentMyPage 화면 구현
   - 계정 드롭다운 메뉴 구현
   - 라우팅 설정 업데이트
+- 학생 모델 개선
+  - Student 엔티티와 StudentModel에 gender 필드 추가
+  - Firestore 데이터 구조에 gender 필드 추가
 
 ### 현재 진행 중인 작업
 
@@ -132,6 +135,9 @@
   - 종목 선택 탭 구현 ✅
   - 나머지 탭 (출석부, 측정결과조회, 평가, 되돌아보기) 상세 기능 구현
 - 학생 관리 기능 구현
+  - 학생 데이터 모델 통합 및 필드 명 표준화 ✅
+    - Student 엔티티와 StudentModel에 gender 필드 추가 ✅
+    - 학생 관련 필드 명 통일 (className → classNum, studentNumber → studentNum/studentId 등) ✅
   - 학생 마이페이지 비밀번호 재설정 기능 연결
 
 ### 다음 예정 작업
