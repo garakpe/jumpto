@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/error/failures.dart';
-
+import '../../../../core/routes/app_router.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../../domain/repositories/admin_repository.dart';
 import '../../domain/usecases/approve_teacher.dart';
@@ -37,10 +37,20 @@ class AdminCubit extends Cubit<AdminState> {
     );
     
     final result = await _signInAdmin(params);
-    emit(result.fold(
-      (failure) => AdminError(failure.message),
-      (admin) => AdminAuthenticated(admin),
-    ));
+    result.fold(
+      (failure) {
+        print('관리자 로그인 실패: ${failure.message}');
+        emit(AdminError(failure.message));
+      },
+      (admin) {
+        print('관리자 로그인 성공: ${admin.id}, ${admin.displayName}');
+        // 사용자 정보 설정 - 라우터에 사용자 정보 업데이트
+        AppRouter.setCurrentUser(admin);
+        
+        print('라우터에 관리자 정보 설정 완료');
+        emit(AdminAuthenticated(admin));
+      },
+    );
   }
   
   /// 승인 대기 중인 교사 목록 조회

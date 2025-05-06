@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/routes/app_router.dart';
+
 import '../../../../core/presentation/theme/app_colors.dart';
 import '../../../../core/presentation/widgets/app_button.dart';
 import '../../../../core/presentation/widgets/app_text_field.dart';
@@ -39,7 +41,21 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
         listener: (context, state) {
           if (state is AdminAuthenticated) {
             // 관리자 인증 성공 시 대시보드로 이동
-            context.go('/admin/dashboard');
+            print('관리자 인증 성공: ${state.admin.displayName}');
+            
+            // 1. AppRouter에 현재 사용자 설정
+            AppRouter.setCurrentUser(state.admin);
+            print('라우터에 사용자 정보 직접 설정 확인');
+            
+            // 2. 라우터 새로고침
+            AppRouter.router.refresh();
+            
+            // 3. 네비게이션 지연 처리
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              // 4. 대시보드로 이동
+              print('대시보드로 이동 시도');
+              context.go('/admin/dashboard');
+            });
           } else if (state is AdminError) {
             // 오류 발생 시 스낵바 표시
             ScaffoldMessenger.of(context).showSnackBar(

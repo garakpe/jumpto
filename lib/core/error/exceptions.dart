@@ -1,5 +1,9 @@
 /// 서버 관련 예외
-class ServerException implements Exception {}
+class ServerException implements Exception {
+  final String message;
+
+  ServerException({required this.message});
+}
 
 /// 캐시 관련 예외
 class CacheException implements Exception {}

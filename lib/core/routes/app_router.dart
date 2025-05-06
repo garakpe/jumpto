@@ -7,6 +7,8 @@ import '../../features/auth/domain/entities/user.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
+import '../../features/auth/presentation/pages/student_mypage.dart';
+import '../../features/auth/presentation/pages/student_upload_page.dart';
 import '../../features/auth/presentation/pages/waiting_approval_page.dart';
 import '../../features/common/presentation/pages/content_selection_page.dart';
 import '../../features/paps/presentation/pages/home_page.dart';
@@ -24,7 +26,9 @@ class AppRouter {
   
   /// 인증 상태 설정
   static void setCurrentUser(User? user) {
+    print('이전 사용자: $_currentUser');
     _currentUser = user;
+    print('새 사용자 설정: ${user?.id}, ${user?.displayName}, isAdmin: ${user?.isAdmin}');
     
     // 라우터 재구성 - 인증 상태에 따라 리디렉션
     if (_router != null) {
@@ -56,7 +60,10 @@ class AppRouter {
           // 관리자 대시보드로 가는 경우 로그인 여부 확인
           if (state.fullPath == '/admin/dashboard') {
             if (_currentUser == null || !_currentUser!.isAdmin) {
+              print('관리자 권한 부족: $_currentUser');
               return '/admin/login';
+            } else {
+              print('관리자 접근 허용: ${_currentUser!.displayName}');
             }
           }
           return null; // 관리자 관련 경로는 기본 리디렉션 없음
@@ -82,6 +89,16 @@ class AppRouter {
           if (state.fullPath != '/waiting-approval') {
             return '/waiting-approval';
           }
+        }
+        
+        // 학생 업로드 페이지는 교사만 접근 가능
+        if (isLoggedIn && state.fullPath == '/student-upload' && !_currentUser!.isTeacher) {
+          return '/content-selection';
+        }
+        
+        // 학생 마이페이지는 학생만 접근 가능
+        if (isLoggedIn && state.fullPath == '/student-mypage' && !_currentUser!.isStudent) {
+          return '/content-selection';
         }
         
         // 기본적으로 리디렉션 없음
@@ -137,6 +154,18 @@ class AppRouter {
         GoRoute(
           path: '/teacher-dashboard',
           builder: (context, state) => const TeacherDashboardPage(),
+        ),
+        
+        // 학생 업로드 화면 (추가)
+        GoRoute(
+          path: '/student-upload',
+          builder: (context, state) => const StudentUploadPage(),
+        ),
+        
+        // 학생 마이페이지 화면 (추가)
+        GoRoute(
+          path: '/student-mypage',
+          builder: (context, state) => const StudentMyPage(),
         ),
         
         // 승인 대기 화면

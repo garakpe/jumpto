@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/presentation/widgets/loading_view.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
+import '../../../auth/presentation/widgets/account_dropdown.dart';
 import '../widgets/menu_card.dart';
 
 /// 홈 화면
@@ -19,11 +20,13 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('온라인 팝스'),
         actions: [
-          // 로그아웃 버튼
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              context.read<AuthCubit>().signOut();
+          // 계정 드롭다운 메뉴
+          BlocBuilder<AuthCubit, AuthState>(
+            builder: (context, state) {
+              if (state is AuthAuthenticated) {
+                return AccountDropdown(user: state.user);
+              }
+              return const SizedBox.shrink();
             },
           ),
         ],

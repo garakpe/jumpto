@@ -14,8 +14,6 @@
   - ContentSelectionPage 생성
   - ContentCard 위젯 구현
   - 라우팅 수정 (로그인 후 콘텐츠 선택 화면으로 이동)
-- 인증 후 라우팅 경로 수정
-  - LoginPage 및 RegisterPage에서 인증 성공 후 '/home' 대신 '/content-selection'으로 이동하도록 수정
 
 - 프로젝트 초기 설정
 - project_plan.md 파일 생성
@@ -99,6 +97,24 @@
     - 종목 선택 탭 구현
     - 출석부, 측정결과조회, 평가, 되돌아보기 탭 기본 구조 구현
 
+### 완료된 작업 (최근 추가)
+
+- 학생 관리 기능 구현
+  - Student 엔티티 구현
+  - StudentRepository 인터페이스 및 구현체 개발
+  - StudentRemoteDataSource 구현
+  - 학생 관리 유스케이스 구현
+    - GetStudentsByTeacher 유스케이스 구현
+    - UploadStudents 유스케이스 구현
+  - StudentCubit 구현
+  - 학생 업로드 화면 구현
+  - 의존성 주입 설정 업데이트
+- 학생 마이페이지 구현
+  - 학생 비밀번호 변경 유스케이스(ChangeStudentPassword) 구현
+  - StudentMyPage 화면 구현
+  - 계정 드롭다운 메뉴 구현
+  - 라우팅 설정 업데이트
+
 ### 현재 진행 중인 작업
 
 - Firebase Authentication 설정 (이메일/비밀번호 인증 활성화) ✅
@@ -115,6 +131,8 @@
   - 콘텐츠 선택 화면에서 교사용 대시보드로 연결 ✅
   - 종목 선택 탭 구현 ✅
   - 나머지 탭 (출석부, 측정결과조회, 평가, 되돌아보기) 상세 기능 구현
+- 학생 관리 기능 구현
+  - 학생 마이페이지 비밀번호 재설정 기능 연결
 
 ### 다음 예정 작업
 
@@ -183,6 +201,11 @@
   - 자동 하이픈 포맷 추가 ✅
   - 이메일, 비밀번호 유효성 검사 강화 ✅
   - User 엔티티에 phoneNumber 필드 추가 ✅
+- 학생 관리 기능 구현
+  - Student 엔티티 구현
+  - StudentRepository 구현
+  - 학생 업로드 화면 구현
+  - 학생 마이페이지 구현
 
 ### 테스트 계정 정보
 
@@ -221,6 +244,8 @@
    - 보고서 생성 기능 구현
    - 데이터 모델 간 일관성 확보
    - 교사 회원가입 화면 개선 (핸드폰 번호 추가, 유효성 검사 기능 강화) ✅
+   - 학생 업로드 기능 구현 ✅
+   - 학생 마이페이지 구현 ✅
 
 3. **테스트 및 배포**
    - 단위 테스트 작성
@@ -232,27 +257,27 @@
 ### 도메인 계층 (Domain Layer)
 
 - **엔티티**: 핵심 비즈니스 모델 구현 완료 및 구조 개선
-  - User, PapsRecord, PapsStandard, TeacherSettings 등
+  - User, PapsRecord, PapsStandard, TeacherSettings, Student 등
   - 구조 일관성을 위해 entities 폴더로 통합 관리
 - **레포지토리 인터페이스**: 데이터 접근 추상화 구현 완료
-  - AuthRepository, PapsRepository, TeacherSettingsRepository, AdminRepository 등
+  - AuthRepository, PapsRepository, TeacherSettingsRepository, AdminRepository, StudentRepository 등
   - API 일관성을 위해 모든 실패 반환 타입을 Failure로 통일
 - **유스케이스**: 핵심 비즈니스 로직 구현 완료
-  - LoadPapsStandards, CalculatePapsGrade, SignInWithEmailPassword, GetTeacherSettings, SaveTeacherSettings, SignInAdmin, ApproveTeacher 등
+  - LoadPapsStandards, CalculatePapsGrade, SignInWithEmailPassword, GetTeacherSettings, SaveTeacherSettings, SignInAdmin, ApproveTeacher, UploadStudents, GetStudentsByTeacher, ChangeStudentPassword 등
 
 ### 프레젠테이션 계층 (Presentation Layer)
 
 - **UI 화면**: 주요 화면 구현 완료
-  - 인증 화면, 홈 화면, 팝스 기준표 화면, 팝스 측정 화면, 교사용 대시보드, 관리자 화면 등
+  - 인증 화면, 홈 화면, 팝스 기준표 화면, 팝스 측정 화면, 교사용 대시보드, 관리자 화면, 학생 업로드 화면, 학생 마이페이지 등
 - **상태 관리**: BLoC/Cubit 패턴 적용 완료
-  - AuthCubit, PapsCubit, TeacherSettingsCubit, AdminCubit 등
+  - AuthCubit, PapsCubit, TeacherSettingsCubit, AdminCubit, StudentCubit 등
 
 ### 데이터 계층 (Data Layer)
 
 - **데이터 소스**: 로컬/원격 데이터 접근 구현 완료
-  - PapsLocalDataSource, PapsRemoteDataSource, AuthRemoteDataSource, AuthLocalDataSource, TeacherSettingsRemoteDataSource, AdminRemoteDataSource 등
+  - PapsLocalDataSource, PapsRemoteDataSource, AuthRemoteDataSource, AuthLocalDataSource, TeacherSettingsRemoteDataSource, AdminRemoteDataSource, StudentRemoteDataSource 등
 - **레포지토리 구현체**: 레포지토리 인터페이스 구현 완료 및 개선
-  - PapsRepositoryImpl, AuthRepositoryImpl, TeacherSettingsRepositoryImpl, AdminRepositoryImpl 등
+  - PapsRepositoryImpl, AuthRepositoryImpl, TeacherSettingsRepositoryImpl, AdminRepositoryImpl, StudentRepositoryImpl 등
   - 코드 생성 의존성 제거 및 수동 직렬화 로직 구현
 
 ## 의존성 주입
@@ -261,6 +286,7 @@
 - 주요 서비스, 레포지토리, 유스케이스 의존성 등록 완료
 - 의존성 주입 구조 개선 (lib/di/injection_container.dart 사용)
 - 관리자 기능 관련 의존성 등록 완료
+- 학생 관리 기능 관련 의존성 등록 완료
 
 ## 오류 처리 개선
 
@@ -280,8 +306,8 @@
 
 2. **확장 기능 - 2단계 (진행 중)**
 
-   - 교사 계정 승인 기능 (관리자)
-   - 학생 명단 관리
+   - 교사 계정 승인 기능 (관리자) ✅
+   - 학생 명단 관리 ✅
    - 활동 결과(소감문) 제출 및 관리
    - 데이터 엑셀 다운로드
 
@@ -298,6 +324,7 @@
 - **UI 개발**: 완료
 - **Firebase 연결**: 완료
 - **관리자 기능 개발**: 완료
+- **학생 관리 기능 개발**: 진행 중
 - **추가 기능 개발**: 진행 중
 - **테스트 및 배포**: 진행 예정
 

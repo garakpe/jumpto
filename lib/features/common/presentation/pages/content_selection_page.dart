@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/presentation/widgets/loading_view.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
+import '../../../auth/presentation/widgets/account_dropdown.dart';
 import '../widgets/content_card.dart';
 
 /// 콘텐츠 선택 화면
@@ -19,21 +20,13 @@ class ContentSelectionPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('콘텐츠 선택'),
         actions: [
-          // 계정 아이콘
-          IconButton(
-            icon: const Icon(Icons.account_circle),
-            onPressed: () {
-              // 계정 정보 표시 (미구현)
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('계정 정보 기능은 아직 구현 중입니다.')),
-              );
-            },
-          ),
-          // 로그아웃 버튼
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              context.read<AuthCubit>().signOut();
+          BlocBuilder<AuthCubit, AuthState>(
+            builder: (context, state) {
+              if (state is AuthAuthenticated) {
+                // 계정 드롭다운 메뉴
+                return AccountDropdown(user: state.user);
+              }
+              return const SizedBox.shrink();
             },
           ),
         ],
@@ -64,6 +57,11 @@ class ContentSelectionPage extends StatelessWidget {
         children: [
           // 환영 메시지
           _buildWelcomeSection(context, user),
+          const SizedBox(height: 24),
+          
+          // 교사인 경우 학생 업로드 버튼 표시
+          if (user.isTeacher) 
+            _buildStudentUploadSection(context),
           const SizedBox(height: 24),
           
           // 콘텐츠 선택 섹션
@@ -121,6 +119,51 @@ class ContentSelectionPage extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+  
+  // 학생 업로드 섹션
+  Widget _buildStudentUploadSection(BuildContext context) {
+    return Card(
+      color: Colors.blue.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '학생 관리',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '학생 명단을 관리하고 업로드할 수 있습니다.',
+              style: TextStyle(
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.upload_file),
+                label: const Text('학생 명단 업로드'),
+                onPressed: () {
+                  context.go('/student-upload');
+                },
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.blue,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -16,14 +16,20 @@ import '../features/admin/domain/usecases/sign_in_admin.dart';
 import '../features/admin/presentation/cubit/admin_cubit.dart';
 import '../features/auth/data/datasources/auth_local_data_source.dart';
 import '../features/auth/data/datasources/auth_remote_data_source.dart';
+import '../features/auth/data/datasources/student_remote_datasource.dart';
 import '../features/auth/data/repositories/auth_repository_impl.dart';
+import '../features/auth/data/repositories/student_repository_impl.dart';
 import '../features/auth/domain/repositories/auth_repository.dart';
+import '../features/auth/domain/repositories/student_repository.dart';
 import '../features/auth/domain/usecases/get_current_user.dart';
+import '../features/auth/domain/usecases/get_students_by_teacher.dart';
 import '../features/auth/domain/usecases/register_teacher.dart';
 import '../features/auth/domain/usecases/sign_in_student.dart';
 import '../features/auth/domain/usecases/sign_in_with_email_password.dart';
 import '../features/auth/domain/usecases/sign_out.dart';
+import '../features/auth/domain/usecases/upload_students.dart';
 import '../features/auth/presentation/cubit/auth_cubit.dart';
+import '../features/auth/presentation/cubit/student_cubit.dart';
 import '../features/paps/data/datasources/paps_local_data_source.dart';
 import '../features/paps/data/datasources/paps_remote_data_source.dart';
 import '../features/paps/data/repositories/paps_repository_impl.dart';
@@ -90,6 +96,30 @@ Future<void> init() async {
       getCurrentUser: sl(),
       registerTeacher: sl(),
       signOut: sl(),
+    ),
+  );
+  
+  // Features - Students
+  // Data Sources
+  sl.registerLazySingleton<StudentRemoteDataSource>(
+    () => StudentRemoteDataSourceImpl(firestore: sl()),
+  );
+  
+  // Repositories
+  sl.registerLazySingleton<StudentRepository>(
+    () => StudentRepositoryImpl(remoteDataSource: sl()),
+  );
+  
+  // Use Cases
+  sl.registerLazySingleton(() => GetStudentsByTeacher(sl()));
+  sl.registerLazySingleton(() => UploadStudents(sl()));
+  
+  // BLoC
+  sl.registerFactory(
+    () => StudentCubit(
+      getStudentsByTeacher: sl(),
+      uploadStudents: sl(),
+      getCurrentUser: sl(),
     ),
   );
   

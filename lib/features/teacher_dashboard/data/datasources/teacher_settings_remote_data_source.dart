@@ -51,7 +51,7 @@ class TeacherSettingsRemoteDataSourceImpl implements TeacherSettingsRemoteDataSo
         return defaultSettings;
       }
     } catch (e) {
-      throw ServerException();
+      throw ServerException(message: '교사 설정 조회 실패: $e');
     }
   }
 
@@ -71,7 +71,7 @@ class TeacherSettingsRemoteDataSourceImpl implements TeacherSettingsRemoteDataSo
 
       return updatedSettings;
     } catch (e) {
-      throw ServerException();
+      throw ServerException(message: '교사 설정 저장 실패: $e');
     }
   }
 }
