@@ -5,9 +5,7 @@ import 'dart:typed_data';
 import 'package:go_router/go_router.dart';
 import 'package:universal_html/html.dart' as html;
 
-import '../../../../core/presentation/widgets/loading_view.dart';
-import '../../../../core/util/excel_helper.dart';
-import '../../../auth/presentation/cubit/auth_cubit.dart';
+import '../../../../core/util/simple_excel_helper.dart';
 import '../cubit/student_cubit.dart';
 
 /// 학생 업로드 페이지
@@ -244,12 +242,13 @@ class _StudentUploadPageState extends State<StudentUploadPage> {
         _statusMessage = '템플릿 파일 생성 중...';
       });
 
-      // ExcelHelper를 사용하여 템플릿 생성
-      final Uint8List bytes = ExcelHelper.createStudentExcelTemplate();
-      
+      // 더 단순한 방식으로 시도
+      final Uint8List bytes =
+          SimpleExcelHelper.createBasicStudentExcelTemplate();
+
       // 웹 환경에서 직접 다운로드 실행
-      ExcelHelper.downloadForWeb(bytes, '학생명단_템플릿.xlsx');
-      
+      SimpleExcelHelper.downloadFileForWeb(bytes, '학생명단_템플릿.xlsx');
+
       setState(() {
         _isDownloading = false;
         _statusMessage = '템플릿 파일이 다운로드되었습니다. 데이터를 입력한 후 업로드해주세요.';
@@ -261,8 +260,6 @@ class _StudentUploadPageState extends State<StudentUploadPage> {
       });
     }
   }
-  
-
 
   /// 엑셀 파일 선택 및 처리
   Future<void> _pickExcelFile() async {
