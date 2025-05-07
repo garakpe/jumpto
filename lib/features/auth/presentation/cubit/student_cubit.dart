@@ -5,6 +5,8 @@ import 'package:excel/excel.dart';
 import 'dart:typed_data';
 import 'package:dartz/dartz.dart';
 
+import '../../../../core/util/excel_helper.dart';
+
 import '../../../../core/error/failures.dart';
 
 import '../../../../core/usecases/usecase.dart';
@@ -324,71 +326,8 @@ class StudentCubit extends Cubit<StudentState> {
   /// 엑셀 템플릿 생성
   Future<Uint8List?> createExcelTemplate() async {
     try {
-      // 엑셀 객체 생성
-      final excel = Excel.createExcel();
-
-      // Excel 4.0.6에서는 시트 가져오는 방법이 다름
-      final defaultSheetName = excel.getDefaultSheet()!;
-      final sheet = excel.sheets[defaultSheetName]!;
-      excel.rename(defaultSheetName, '학생명단'); // 시트 객체가 아닌 시트 이름만 전달
-
-      // 헤더 추가 (최신 excel 패키지는 CellValue 클래스를 사용)
-      sheet
-          .cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0))
-          .value = TextCellValue('학년');
-      sheet
-          .cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 0))
-          .value = TextCellValue('반');
-      sheet
-          .cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: 0))
-          .value = TextCellValue('번호');
-      sheet
-          .cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 0))
-          .value = TextCellValue('이름');
-      sheet
-          .cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 0))
-          .value = TextCellValue('초기비밀번호 (선택, 기본값 1234)'); // 설명 추가
-
-      // 샘플 데이터 추가 - 첫 번째 행
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1)).value = IntCellValue(1);
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 1)).value = IntCellValue(1);
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: 1)).value = IntCellValue(1);
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 1)).value = TextCellValue('김민준');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 1)).value = TextCellValue('1234');
-      
-      // 샘플 데이터 추가 - 두 번째 행
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 2)).value = IntCellValue(1);
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 2)).value = IntCellValue(1);
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: 2)).value = IntCellValue(2);
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 2)).value = TextCellValue('이서연');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 2)).value = TextCellValue('1234');
-      
-      // 샘플 데이터 추가 - 세 번째 행
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 3)).value = IntCellValue(1);
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 3)).value = IntCellValue(2);
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: 3)).value = IntCellValue(1);
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 3)).value = TextCellValue('박지원');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 3)).value = TextCellValue('1234');
-
-      // Excel 4.0.6에서는 setColumnAutoFit 메서드를 사용
-      // 각 열의 너비를 쉘에 맞게 자동 조절
-      // 열 너비를 더 넓게 설정
-      sheet.setColumnWidth(0, 12.0); // 학년
-      sheet.setColumnWidth(1, 12.0); // 반
-      sheet.setColumnWidth(2, 12.0); // 번호
-      sheet.setColumnWidth(3, 20.0); // 이름
-      sheet.setColumnWidth(4, 25.0); // 초기비밀번호
-
-      // 엑셀 파일을 바이트 배열로 변환
-      // encode() 메서드는 List<int>? 를 반환하므로 Uint8List로 변환 필요
-      final fileBytes = excel.encode();
-
-      if (fileBytes == null) {
-        emit(StudentError(message: '엑셀 파일 생성 실패')); // Cubit 상태 변경으로 오류 알림
-        return null;
-      }
-
-      return Uint8List.fromList(fileBytes);
+      // ExcelHelper 클래스를 사용하여 템플릿 생성
+      return ExcelHelper.createStudentExcelTemplate();
     } catch (e, stacktrace) {
       print('Excel 템플릿 생성 중 예외 발생: $e');
       print(stacktrace);
