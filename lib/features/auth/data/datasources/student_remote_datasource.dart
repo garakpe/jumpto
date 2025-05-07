@@ -5,6 +5,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import '../../../../core/error/exceptions.dart';
 import '../models/student_model.dart';
 import 'package:flutter/foundation.dart';
+import '../../../../core/firebase/services/cloud_functions_service.dart';
 
 /// 학생 원격 데이터 소스 인터페이스
 abstract class StudentRemoteDataSource {
@@ -46,11 +47,15 @@ abstract class StudentRemoteDataSource {
 class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
   final FirebaseFirestore _firestore;
   final firebase_auth.FirebaseAuth _auth;
+  final CloudFunctionsService _cloudFunctionsService;
   
   StudentRemoteDataSourceImpl({
     required FirebaseFirestore firestore,
     required firebase_auth.FirebaseAuth auth,
-  }) : _firestore = firestore, _auth = auth;
+    required CloudFunctionsService cloudFunctionsService,
+  }) : _firestore = firestore, 
+       _auth = auth,
+       _cloudFunctionsService = cloudFunctionsService;
   
   @override
   Future<List<StudentModel>> getStudentsByTeacherId(String teacherId) async {
@@ -202,77 +207,14 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
   @override
   Future<void> resetStudentPassword(String studentId, String newPassword) async {
     try {
-      // 학번으로 학생 문서 조회
-      final querySnapshot = await _firestore
-          .collection('students')
-          .where('studentId', isEqualTo: studentId)
-          .limit(1)
-          .get();
-      
-      if (querySnapshot.docs.isEmpty) {
-        throw ServerException(message: '학생을 찾을 수 없습니다.');
-      }
-      
-      final studentDoc = querySnapshot.docs.first;
-      final studentData = studentDoc.data();
-      
-      // 인증 UID 가져오기
-      final authUid = studentData['authUid'];
-      if (authUid == null) {
-        throw ServerException(message: '학생의 인증 정보를 찾을 수 없습니다.');
-      }
-      
-      // 이메일 가져오기
-      final email = studentData['email'];
-      if (email == null) {
-        throw ServerException(message: '학생의 이메일 정보를 찾을 수 없습니다.');
-      }
-      
-      try {
-        // 관리자 권한이 없으니 현재 로그인한 유저로 임시 로그인 후 비밀번호 변경
-        // 관리자 서버 API를 사용할 수 있다면 그 경우 Cloud Functions 사용하는 것이 좋음
-        final currentUser = _auth.currentUser;
-        if (currentUser == null) {
-          throw ServerException(message: '로그인되지 않은 상태입니다.');
-        }
-        
-        // 임시 토큰 받기 - 학생 에이전트로 전환을 위해
-        final credential = firebase_auth.EmailAuthProvider.credential(
-          email: email,
-          password: newPassword, // 이미 비밀번호를 알고 있다고 가정 (마스터 접근 권한)
-        );
-        
-        // 지금은 예외가 발생할 것이지만, Firebase Admin SDK로 대체해야 함
-        try {
-          await _auth.signInWithCredential(credential);
-          await _auth.currentUser?.updatePassword(newPassword);
-          // 원래 사용자로 다시 로그인
-          await _auth.signInWithEmailAndPassword(
-            email: currentUser.email!,
-            password: currentUser.email!, // 원래 비밀번호를 알 수 없으니 오류 발생할 것임
-          );
-        } catch (signInError) {
-          // 예상대로 실패하고, 관리자 권한으로 관리해야 함을 로그로 남김
-          debugPrint('학생 인증 각동 실패 (관리자 권한 필요): $signInError');
-        }
-        
-        // Firestore에 업데이트 시간 기록
-        await _firestore
-            .collection('students')
-            .doc(studentDoc.id)
-            .update({
-              'updatedAt': FieldValue.serverTimestamp(),
-              // 실제 비밀번호는 저장하지 않고 Auth에서 관리
-            });
-        
-        // 이 기능은 실제 프로덕션에서는 Cloud Functions를 통해 구현해야 함
-        throw UnimplementedError('비밀번호 초기화는 Firebase Admin SDK나 Cloud Functions를 통해 구현해야 합니다.');
-      } catch (authError) {
-        throw ServerException(message: '인증 오류: $authError');
-      }
+      // CloudFunctionsService를 통해 Cloud Functions 호출
+      await _cloudFunctionsService.resetStudentPassword(
+        studentId: studentId,
+        newPassword: newPassword,
+      );
     } catch (e) {
-      if (e is UnimplementedError) {
-        throw ServerException(message: e.toString());
+      if (e is ServerException) {
+        rethrow;
       }
       throw ServerException(message: '비밀번호 재설정 실패: $e');
     }
@@ -324,17 +266,8 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
   @override
   Future<void> updateStudentGender(String gender) async {
     try {
-      // Cloud Functions 서비스 호출 (사용자 권한 검증 등은 Cloud Functions에서 처리)
-      final functions = FirebaseFunctions.instance;
-      final callable = functions.httpsCallable('updateStudentGender');
-      
-      final result = await callable.call({
-        'gender': gender,
-      });
-      
-      if (result.data['success'] != true) {
-        throw ServerException(message: result.data['message'] ?? '성별 업데이트 실패');
-      }
+      // CloudFunctionsService를 통해 Cloud Functions 호출
+      await _cloudFunctionsService.updateStudentGender(gender: gender);
     } catch (e) {
       if (e is ServerException) {
         rethrow;

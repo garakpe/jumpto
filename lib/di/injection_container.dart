@@ -6,7 +6,7 @@ import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/firebase/admin_seed.dart';
-import '../core/firebase/cloud_functions_service.dart';
+import '../core/firebase/services/cloud_functions_service.dart';
 import '../core/network/network_info.dart';
 import '../core/usecases/usecase.dart';
 import '../features/admin/data/datasources/admin_remote_data_source.dart';
@@ -107,7 +107,11 @@ Future<void> init() async {
   // Features - Students
   // Data Sources
   sl.registerLazySingleton<StudentRemoteDataSource>(
-    () => StudentRemoteDataSourceImpl(firestore: sl(), auth: sl()),
+    () => StudentRemoteDataSourceImpl(
+      firestore: sl(), 
+      auth: sl(), 
+      cloudFunctionsService: sl()
+    ),
   );
   
   // Repositories
