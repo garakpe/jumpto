@@ -27,10 +27,10 @@ class _StudentMyPageState extends State<StudentMyPage> {
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   // 성별 선택 상태
   String? _selectedGender;
-  
+
   @override
   void initState() {
     super.initState();
@@ -144,7 +144,7 @@ class _StudentMyPageState extends State<StudentMyPage> {
           // 계정 관리 섹션
           Text('계정 관리', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 16),
-          
+
           // 성별 선택 섹션
           _buildGenderSelection(context, user),
           const SizedBox(height: 16),
@@ -261,7 +261,8 @@ class _StudentMyPageState extends State<StudentMyPage> {
       ),
     );
   }
-  
+
+  /// 성별 선택 섹션
   /// 성별 선택 섹션
   Widget _buildGenderSelection(BuildContext context, User user) {
     return Card(
@@ -272,10 +273,7 @@ class _StudentMyPageState extends State<StudentMyPage> {
           children: [
             const Text(
               '성별 선택',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -324,6 +322,9 @@ class _StudentMyPageState extends State<StudentMyPage> {
                       ),
                     );
                   } else if (state is StudentLoaded) {
+                    // AuthCubit을 통해 사용자 정보 갱신 요청
+                    // 현재 사용자 정보를 다시 로드하여 화면에 반영될 수 있도록 합니다.
+                    context.read<AuthCubit>().checkCurrentUser();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('성별 정보가 저장되었습니다.'),
@@ -333,14 +334,25 @@ class _StudentMyPageState extends State<StudentMyPage> {
                   }
                 },
                 builder: (context, state) {
-                  final isLoading = state is StudentLoading;
-                  
+                  // Cubit이 현재 로딩 상태인지 확인
+                  final cubitIsLoading = state is StudentLoading;
+                  // 성별이 선택되지 않았는지 확인
+                  final genderIsNull = _selectedGender == null;
+
+                  // 버튼은 Cubit이 처리 중이거나 성별이 선택되지 않은 경우
+                  // "로딩" (비활성화) 상태여야 합니다.
+                  final effectiveIsLoading = cubitIsLoading || genderIsNull;
+
                   return AppButton(
                     text: '성별 저장',
-                    onPressed: _selectedGender == null 
-                        ? null 
-                        : () => _saveGender(context),
-                    isLoading: isLoading,
+                    // onPressed는 항상 null이 아닌 VoidCallback을 제공해야 합니다.
+                    // _saveGender 메서드 자체에서 _selectedGender가 null인지 확인하므로
+                    // 호출하는 것은 안전합니다.
+                    // 버튼의 활성화/비활성화 상태는 'isLoading'으로 제어됩니다.
+                    onPressed: () => _saveGender(context),
+                    // AppButton의 isLoading 속성은 버튼 비활성화를 처리합니다.
+                    // Cubit이 로딩 중이거나 성별이 선택되지 않은 경우 true가 됩니다.
+                    isLoading: effectiveIsLoading,
                     icon: Icons.save,
                   );
                 },
@@ -364,7 +376,7 @@ class _StudentMyPageState extends State<StudentMyPage> {
     if (_formKey.currentState!.validate()) {
       // 비밀번호 변경 로직 구현
       // TODO: 비밀번호 변경 API 호출
-      
+
       // 임시 성공 메시지
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -372,12 +384,12 @@ class _StudentMyPageState extends State<StudentMyPage> {
           backgroundColor: Colors.green,
         ),
       );
-      
+
       // 비밀번호 변경 후 입력 필드 초기화
       _currentPasswordController.clear();
       _newPasswordController.clear();
       _confirmPasswordController.clear();
-      
+
       // 비밀번호 변경 폼 닫기
       setState(() {
         _isChangingPassword = false;
