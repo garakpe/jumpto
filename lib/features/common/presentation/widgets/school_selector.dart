@@ -42,19 +42,23 @@ class _SchoolSelectorState extends State<SchoolSelector> {
   final _customRegionController = TextEditingController();
   final _customSchoolNameController = TextEditingController();
   
+  // 학교명 변경 콜백 함수
+  void _onSchoolNameChanged() {
+    if (_selectedRegion != null && !_useCustomInput) {
+      context.read<SchoolCubit>().searchSchoolsByName(
+        _selectedRegion!,
+        _schoolNameController.text,
+      );
+    }
+  }
+  
   @override
   void initState() {
     super.initState();
     context.read<SchoolCubit>().loadRegions();
     
-    _schoolNameController.addListener(() {
-      if (_selectedRegion != null && !_useCustomInput) {
-        context.read<SchoolCubit>().searchSchoolsByName(
-          _selectedRegion!,
-          _schoolNameController.text,
-        );
-      }
-    });
+    // 학교명 컨트롤러에 리스너 등록
+    _schoolNameController.addListener(_onSchoolNameChanged);
     
     _focusNode.addListener(() {
       setState(() {
@@ -369,13 +373,7 @@ class _SchoolSelectorState extends State<SchoolSelector> {
                   // 학교 선택 시 입력 필드에 학교 이름 반영
                   print('학교 선택: ${school.name}');
                   
-                  _schoolNameController.value = TextEditingValue(
-                    text: school.name,
-                    selection: TextSelection.fromPosition(
-                      TextPosition(offset: school.name.length),
-                    ),
-                  );
-                  
+                  // 우선 상태를 업데이트
                   setState(() {
                     _selectedSchool = school;
                     _isSearching = false;
@@ -384,11 +382,19 @@ class _SchoolSelectorState extends State<SchoolSelector> {
                   // 콜백 호출
                   widget.onSchoolSelected(school);
                   
-                  // 포커스 해제
-                  _focusNode.unfocus();
-                  
-                  // 강제로 리빌드 - 이름 필드의 텍스트가 확실히 갱신되도록
-                  Future.microtask(() => setState(() {}));
+                  // 검색 결과를 선택한 후에 컨트롤러 업데이트 (포커스 해제 이후)
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    // 포커스 해제
+                    _focusNode.unfocus();
+                    
+                    // 리스너 일시 중지 후 텍스트 설정
+                    _schoolNameController.removeListener(_onSchoolNameChanged);
+                    _schoolNameController.text = school.name;
+                    _schoolNameController.addListener(_onSchoolNameChanged);
+                    
+                    // UI 업데이트
+                    setState(() {});
+                  });
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),

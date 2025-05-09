@@ -127,9 +127,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                   setState(() {
                                     _selectedSchool = school;
                                     if (school != null) {
-                                      // 학교 이름 설정을 더 명시적으로 처리
-                                      _schoolNameController.text = school.name;
-                                      print('학교 이름 설정: ${school.name}');
+                                      // 학교 이름을 설정하는 작업은 school_selector.dart에서 처리
+                                      // 이미 컨트롤러가 school.name으로 설정됨
+                                      print('학교 이름 선택됨: ${school.name}');
                                     } else {
                                       _schoolNameController.text = '';
                                     }
