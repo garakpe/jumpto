@@ -17,7 +17,7 @@
   - updateStudentGender: 학생 성별 정보 업데이트
 - CloudFunctionsService 구현
   - Cloud Functions를 호출할 수 있는 서비스 클래스 구현
-  - 비밀번호 초기화 및 성별 업데이트 기능 포함
+  - 비밀번호 초기화 및 성별 업데이트 기능 구현
 - StudentCubit 개선
   - UpdateStudentGender 유스케이스 통합
   - 성별 업데이트 기능 추가# 온라인 팝스(PAPS) 교육 플랫폼 개발 계획
@@ -191,6 +191,26 @@
   - StudentMyPage UI 화면에 성별 선택 메뉴 추가
   - 성별 선택 및 저장 기능 구현
 
+### 최근 완료된 작업 (교사 회원가입 학교 선택 기능 추가)
+
+- 학교 엔티티 및 모델 구현
+  - School 엔티티 생성
+  - SchoolModel 클래스 구현 (JSON 파싱 로직 포함)
+- 학교 데이터 관리 기능 구현
+  - SchoolRepository 인터페이스 및 구현체 개발
+  - SchoolLocalDataSource 구현 (지역별 학교 JSON 파일 로드)
+  - 지역 및 학교 검색 관련 유스케이스 구현
+- 학교 검색 UI 구현
+  - SchoolSelector 위젯 개발 (지역 선택 및 학교명 검색 기능)
+  - 자동 완성 및 직접 입력 옵션 제공
+- 교사 회원가입 화면 개선
+  - 학교 선택 UI 추가
+  - 기존 학교명 수동 입력 필드 유지 (직접 입력 시 사용)
+  - 선택된 학교 정보 저장 및 회원가입 시 전달 로직 구현
+- 의존성 주입 설정 업데이트
+  - SchoolCubit 및 관련 컴포넌트 등록
+  - MultiBlocProvider에 SchoolCubit 추가
+
 ### 다음 예정 작업
 
 - Cloud Functions 배포 및 테스트
@@ -208,6 +228,9 @@
   - 측정결과조회 탭 기능 구현
   - 평가 탭 기능 구현
   - 되돌아보기 탭 기능 구현
+- 학생 관리 기능 개선
+  - 학생 비밀번호 초기화 기능 구현
+  - 학생 마이페이지 UI 개선
 
 ### 발생한 문제점
 
@@ -305,6 +328,8 @@
    - 내 기록 조회 화면 구현 (학생용)
    - 보고서 생성 기능 구현
    - 데이터 모델 간 일관성 확보
+   - 학생 비밀번호 초기화 기능 개선
+   - 학생 마이페이지 UI 개선
    - 교사 회원가입 화면 개선 (핸드폰 번호 추가, 유효성 검사 기능 강화) ✅
    - 학생 업로드 기능 구현 ✅
    - 학생 마이페이지 구현 ✅
@@ -319,27 +344,27 @@
 ### 도메인 계층 (Domain Layer)
 
 - **엔티티**: 핵심 비즈니스 모델 구현 완료 및 구조 개선
-  - User, PapsRecord, PapsStandard, TeacherSettings, Student 등
+  - User, PapsRecord, PapsStandard, TeacherSettings, Student, School 등
   - 구조 일관성을 위해 entities 폴더로 통합 관리
 - **레포지토리 인터페이스**: 데이터 접근 추상화 구현 완료
-  - AuthRepository, PapsRepository, TeacherSettingsRepository, AdminRepository, StudentRepository 등
+  - AuthRepository, PapsRepository, TeacherSettingsRepository, AdminRepository, StudentRepository, SchoolRepository 등
   - API 일관성을 위해 모든 실패 반환 타입을 Failure로 통일
 - **유스케이스**: 핵심 비즈니스 로직 구현 완료
-  - LoadPapsStandards, CalculatePapsGrade, SignInWithEmailPassword, GetTeacherSettings, SaveTeacherSettings, SignInAdmin, ApproveTeacher, UploadStudents, GetStudentsByTeacher, ChangeStudentPassword 등
+  - LoadPapsStandards, CalculatePapsGrade, SignInWithEmailPassword, GetTeacherSettings, SaveTeacherSettings, SignInAdmin, ApproveTeacher, UploadStudents, GetStudentsByTeacher, ChangeStudentPassword, GetRegions, GetSchoolsByRegion, SearchSchools 등
 
 ### 프레젠테이션 계층 (Presentation Layer)
 
 - **UI 화면**: 주요 화면 구현 완료
   - 인증 화면, 홈 화면, 팝스 기준표 화면, 팝스 측정 화면, 교사용 대시보드, 관리자 화면, 학생 업로드 화면, 학생 마이페이지 등
 - **상태 관리**: BLoC/Cubit 패턴 적용 완료
-  - AuthCubit, PapsCubit, TeacherSettingsCubit, AdminCubit, StudentCubit 등
+  - AuthCubit, PapsCubit, TeacherSettingsCubit, AdminCubit, StudentCubit, SchoolCubit 등
 
 ### 데이터 계층 (Data Layer)
 
 - **데이터 소스**: 로컬/원격 데이터 접근 구현 완료
-  - PapsLocalDataSource, PapsRemoteDataSource, AuthRemoteDataSource, AuthLocalDataSource, TeacherSettingsRemoteDataSource, AdminRemoteDataSource, StudentRemoteDataSource 등
+  - PapsLocalDataSource, PapsRemoteDataSource, AuthRemoteDataSource, AuthLocalDataSource, TeacherSettingsRemoteDataSource, AdminRemoteDataSource, StudentRemoteDataSource, SchoolLocalDataSource 등
 - **레포지토리 구현체**: 레포지토리 인터페이스 구현 완료 및 개선
-  - PapsRepositoryImpl, AuthRepositoryImpl, TeacherSettingsRepositoryImpl, AdminRepositoryImpl, StudentRepositoryImpl 등
+  - PapsRepositoryImpl, AuthRepositoryImpl, TeacherSettingsRepositoryImpl, AdminRepositoryImpl, StudentRepositoryImpl, SchoolRepositoryImpl 등
   - 코드 생성 의존성 제거 및 수동 직렬화 로직 구현
 
 ## 의존성 주입
@@ -349,6 +374,7 @@
 - 의존성 주입 구조 개선 (lib/di/injection_container.dart 사용)
 - 관리자 기능 관련 의존성 등록 완료
 - 학생 관리 기능 관련 의존성 등록 완료
+- 학교 선택 기능 관련 의존성 등록 완료
 
 ## 오류 처리 개선
 

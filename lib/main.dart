@@ -10,6 +10,7 @@ import 'core/routes/app_router.dart';
 import 'features/admin/presentation/cubit/admin_cubit.dart';
 import 'features/auth/presentation/cubit/auth_cubit.dart';
 import 'features/auth/presentation/cubit/student_cubit.dart';
+import 'features/common/presentation/cubit/school_cubit.dart';
 import 'features/paps/presentation/cubit/paps_cubit.dart';
 import 'features/teacher_dashboard/presentation/cubit/teacher_settings_cubit.dart';
 import 'firebase_options.dart';
@@ -112,6 +113,8 @@ class MyApp extends StatelessWidget {
         BlocProvider<AdminCubit>(create: (context) => di.sl<AdminCubit>()),
         // 학생 Cubit 제공 (추가)
         BlocProvider<StudentCubit>(create: (context) => di.sl<StudentCubit>()),
+        // 학교 선택 Cubit 제공
+        BlocProvider<SchoolCubit>(create: (context) => di.sl<SchoolCubit>()),
       ],
       child: MaterialApp.router(
         title: '온라인 팝스',

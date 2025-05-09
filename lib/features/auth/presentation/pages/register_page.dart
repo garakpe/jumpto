@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../../features/common/domain/entities/school.dart';
+import '../../../../features/common/presentation/cubit/school_cubit.dart';
+import '../../../../features/common/presentation/widgets/school_selector.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -27,6 +30,18 @@ class _RegisterPageState extends State<RegisterPage> {
   final _schoolNameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  
+  // 선택된 학교 정보 저장
+  School? _selectedSchool;
+  
+  @override
+  void initState() {
+    super.initState();
+    // _schoolNameController의 변경 감지 후 화면 업데이트
+    _schoolNameController.addListener(() {
+      print('학교 이름 필드 변경: ${_schoolNameController.text}');
+    });
+  }
   
   @override
   void dispose() {
@@ -95,17 +110,33 @@ class _RegisterPageState extends State<RegisterPage> {
                             },
                           ),
                           const SizedBox(height: 16),
-                          AppTextField(
-                            label: '학교 이름',
-                            hintText: '근무 중인 학교 이름을 입력하세요',
-                            controller: _schoolNameController,
-                            prefixIcon: const Icon(Icons.school),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return '학교 이름을 입력해주세요';
-                              }
-                              return null;
-                            },
+                          // 학교 선택 위젯
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '학교 선택',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              SchoolSelector(
+                                hintText: '근무 중인 학교를 선택하세요',
+                                allowCustomInput: true,
+                                onSchoolSelected: (school) {
+                                  print('학교 선택 콜백: ${school?.name ?? "null"}');
+                                  setState(() {
+                                    _selectedSchool = school;
+                                    if (school != null) {
+                                      // 학교 이름 설정을 더 명시적으로 처리
+                                      _schoolNameController.text = school.name;
+                                      print('학교 이름 설정: ${school.name}');
+                                    } else {
+                                      _schoolNameController.text = '';
+                                    }
+                                  });
+                                },
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 16),
                           AppTextField(
@@ -255,7 +286,14 @@ class _RegisterPageState extends State<RegisterPage> {
   
   void _register() {
     if (_formKey.currentState!.validate()) {
-      final schoolId = _schoolNameController.text.trim();
+      print('등록 시 학교 이름: ${_schoolNameController.text}');
+      print('등록 시 학교 객체: ${_selectedSchool?.name}');
+    
+      // 학교 정보 처리 - 선택된 학교가 있으면 학교 코드 사용
+      final schoolId = _selectedSchool?.code != null 
+          ? (_selectedSchool!.code != 'custom' ? _selectedSchool!.code : _selectedSchool!.name)
+          : _schoolNameController.text.trim();
+          
       final phoneNumber = _phoneController.text.trim();
       
       context.read<AuthCubit>().registerTeacher(

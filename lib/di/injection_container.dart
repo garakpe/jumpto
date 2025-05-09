@@ -49,6 +49,13 @@ import '../features/teacher_dashboard/domain/repositories/teacher_settings_repos
 import '../features/teacher_dashboard/domain/usecases/get_teacher_settings.dart';
 import '../features/teacher_dashboard/domain/usecases/save_teacher_settings.dart';
 import '../features/teacher_dashboard/presentation/cubit/teacher_settings_cubit.dart';
+import '../features/common/data/datasources/school_local_data_source.dart';
+import '../features/common/data/repositories/school_repository_impl.dart';
+import '../features/common/domain/repositories/school_repository.dart';
+import '../features/common/domain/usecases/get_regions.dart';
+import '../features/common/domain/usecases/get_schools_by_region.dart';
+import '../features/common/domain/usecases/search_schools.dart';
+import '../features/common/presentation/cubit/school_cubit.dart';
 
 /// 서비스 로케이터 인스턴스
 final sl = GetIt.instance;
@@ -189,6 +196,31 @@ Future<void> init() async {
     () => TeacherSettingsCubit(
       getTeacherSettings: sl(),
       saveTeacherSettings: sl(),
+    ),
+  );
+  
+  // Features - Common (School)
+  // Data Sources
+  sl.registerLazySingleton<SchoolLocalDataSource>(
+    () => SchoolLocalDataSourceImpl(),
+  );
+  
+  // Repositories
+  sl.registerLazySingleton<SchoolRepository>(
+    () => SchoolRepositoryImpl(sl()),
+  );
+  
+  // Use Cases
+  sl.registerLazySingleton(() => GetRegions(sl()));
+  sl.registerLazySingleton(() => GetSchoolsByRegion(sl()));
+  sl.registerLazySingleton(() => SearchSchools(sl()));
+  
+  // BLoC
+  sl.registerFactory(
+    () => SchoolCubit(
+      getRegions: sl(),
+      getSchoolsByRegion: sl(),
+      searchSchools: sl(),
     ),
   );
   

@@ -1,0 +1,15 @@
+
+부산 : school_busan.json,
+충청도 : school_choongchung.json,
+대전 : school_daejoen.json,
+대구 : school_daeku.json,
+인천 : school_inchon.json, 
+제주 : school_jejoo.json,
+전라도 : school_joenrado.json, 
+강원도 : school_kangwondo.json,
+광주 : school_kwangju.json,
+경기도 : school_kyungido.json,
+경상도 : school_kyungsangdo.json,
+세종 : school_sejong.json,
+서울 : school_seoul.json,
+울산 : school_ulsan.json 
