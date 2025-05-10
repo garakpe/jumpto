@@ -373,7 +373,11 @@ class _SchoolSelectorState extends State<SchoolSelector> {
                   // 학교 선택 시 입력 필드에 학교 이름 반영
                   print('학교 선택: ${school.name}');
                   
-                  // 우선 상태를 업데이트
+                  // 먼저 리스너 제거 후 텍스트 설정 (즉시)
+                  _schoolNameController.removeListener(_onSchoolNameChanged);
+                  _schoolNameController.text = school.name;
+                  
+                  // 상태 업데이트
                   setState(() {
                     _selectedSchool = school;
                     _isSearching = false;
@@ -382,18 +386,12 @@ class _SchoolSelectorState extends State<SchoolSelector> {
                   // 콜백 호출
                   widget.onSchoolSelected(school);
                   
-                  // 검색 결과를 선택한 후에 컨트롤러 업데이트 (포커스 해제 이후)
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    // 포커스 해제
-                    _focusNode.unfocus();
-                    
-                    // 리스너 일시 중지 후 텍스트 설정
-                    _schoolNameController.removeListener(_onSchoolNameChanged);
-                    _schoolNameController.text = school.name;
+                  // 포커스 해제
+                  _focusNode.unfocus();
+                  
+                  // 리스너 다시 추가 (지연시켜서 추가하여 불필요한 검색 방지)
+                  Future.microtask(() {
                     _schoolNameController.addListener(_onSchoolNameChanged);
-                    
-                    // UI 업데이트
-                    setState(() {});
                   });
                 },
                 child: Padding(
