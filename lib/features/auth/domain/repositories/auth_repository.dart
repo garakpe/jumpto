@@ -34,7 +34,7 @@ abstract class AuthRepository {
 
   /// 학번/비밀번호로 학생 로그인
   Future<Either<Failure, User>> signInStudent({
-    required String schoolId,
+    required String schoolName,
     required String studentId,
     required String password,
   });

@@ -60,8 +60,12 @@ class StudentModel extends Student {
     final studentNum = map['studentNum']?.toString().padLeft(2, '0') ?? '';
     final studentId = '$grade$classNum$studentNum';
     
-    // 시스템 생성 이메일 형식: 학번@학교코드.school
-    final email = '$studentId@$schoolId.school';
+    // 시스템 생성 이메일 형식: "(연도 두자리)(학번)@school(학교코드 뒤 4자리).com"
+    // 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com
+    // 현재 연도에서 뒤 두자리 가져오기 (2025 → 25)
+    final DateTime now = DateTime.now();
+    final String currentYearSuffix = now.year.toString().substring(2);
+    final email = '$currentYearSuffix$studentId@school$schoolId.com';
     
     return StudentModel(
       id: map['id'] ?? '', // Firestore에서 자동 생성될 ID

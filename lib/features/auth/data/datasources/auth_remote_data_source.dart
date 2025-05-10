@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import '../../../../core/firebase/cloud_functions_service.dart';
 
 import '../../domain/entities/user.dart' as domain;
 
@@ -34,7 +35,7 @@ abstract class AuthRemoteDataSource {
 
   /// 학번/비밀번호로 학생 로그인
   Future<domain.User> signInStudent({
-    required String schoolId,
+    required String schoolName,
     required String studentId,
     required String password,
   });
@@ -65,6 +66,7 @@ abstract class AuthRemoteDataSource {
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final firebase_auth.FirebaseAuth _firebaseAuth;
   final FirebaseFirestore _firestore;
+  final CloudFunctionsService _cloudFunctionsService;
 
   /// 사용자 컬렉션 참조
   CollectionReference get _usersCollection => _firestore.collection('users');
@@ -73,7 +75,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   CollectionReference get _studentsCollection =>
       _firestore.collection('students');
 
-  AuthRemoteDataSourceImpl(this._firebaseAuth, this._firestore);
+  AuthRemoteDataSourceImpl(
+    this._firebaseAuth,
+    this._firestore,
+    this._cloudFunctionsService,
+  );
 
   @override
   Future<domain.User?> getCurrentUser() async {
@@ -112,6 +118,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         displayName: userData['displayName'],
         role: role,
         schoolId: userData['schoolId'],
+        schoolName: userData['schoolName'],
         classNum: userData['classNum'],
         studentNum: userData['studentNum'],
         studentId: userData['studentId'],
@@ -193,12 +200,22 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       }
 
       final schoolId = teacherData['schoolId'];
+      final schoolName = teacherData['schoolName'] ?? '';
+
+      // 학년 가져오기 (학급에서 추출)
+      final grade = classNum.substring(0, 1);
+
+      // 학번 생성 (grade + classNum + studentNum)
+      final studentId = '$grade$classNum$studentNum';
 
       // 비밀번호 설정 (기본값: 학번)
       final password = initialPassword ?? studentNum;
 
-      // 학생 이메일 형식 (예: schoolId-classNum-studentNum@school.com)
-      final studentEmail = '$schoolId-$classNum-$studentNum@school.com';
+      // 학생 이메일 형식: "(연도 두자리)(학번)@school(학교코드 뒤 4자리).com"
+      // 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com
+      final DateTime now = DateTime.now();
+      final String currentYearSuffix = now.year.toString().substring(2);
+      final studentEmail = '$currentYearSuffix$studentId@school$schoolId.com';
 
       // Firebase Auth로 학생 계정 생성
       final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
@@ -216,7 +233,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'schoolId': schoolId,
         'classNum': classNum,
         'studentNum': studentNum,
-        'studentId': '$classNum$studentNum',
+        'studentId': studentId,
         'gender': gender,
         'teacherId': teacherId,
         'createdAt': FieldValue.serverTimestamp(),
@@ -227,9 +244,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'email': studentEmail,
         'displayName': displayName,
         'schoolId': schoolId,
+        'schoolName': schoolName,
         'classNum': classNum,
         'studentNum': studentNum,
-        'studentId': '$classNum$studentNum',
+        'studentId': studentId,
         'gender': gender,
         'teacherId': teacherId,
         'createdAt': FieldValue.serverTimestamp(),
@@ -242,9 +260,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         displayName: displayName,
         role: domain.UserRole.student,
         schoolId: schoolId,
+        schoolName: schoolName,
         classNum: classNum,
         studentNum: studentNum,
-        studentId: '$classNum$studentNum',
+        studentId: studentId,
         gender: gender,
       );
     } catch (e) {
@@ -291,28 +310,45 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<domain.User> signInStudent({
-    required String schoolId,
+    required String schoolName,
     required String studentId,
     required String password,
   }) async {
     try {
-      // 학생 이메일 형식으로 변환
-      // 실제 구현에서는 학급 정보도 필요할 수 있음
-      final query =
-          await _studentsCollection
-              .where('schoolId', isEqualTo: schoolId)
-              .where('studentId', isEqualTo: studentId)
-              .get();
+      // Cloud Functions를 사용하여 학생 로그인
+      final result = await _cloudFunctionsService.studentLogin(
+        schoolName: schoolName,
+        studentId: studentId,
+        password: password,
+      );
 
-      if (query.docs.isEmpty) {
-        throw Exception('학생 정보를 찾을 수 없습니다.');
+      // 커스텀 토큰으로 로그인
+      if (result['customToken'] != null) {
+        await _firebaseAuth.signInWithCustomToken(result['customToken']);
       }
 
-      final studentData = query.docs.first.data() as Map<String, dynamic>;
-      final email = studentData['email'];
+      // 인증 후 사용자 정보 가져오기
+      final firebaseUser = _firebaseAuth.currentUser;
+      if (firebaseUser == null) {
+        throw Exception('로그인에 실패했습니다.');
+      }
 
-      // 이메일/비밀번호로 로그인
-      return signInWithEmailPassword(email: email, password: password);
+      // 학생 정보 구성
+      final studentData = result['studentData'];
+      return domain.User(
+        id: firebaseUser.uid,
+        email: firebaseUser.email ?? '$studentId@school.com',
+        displayName: studentData['name'],
+        role: domain.UserRole.student,
+        schoolId: studentData['schoolId'],
+        schoolName: studentData['schoolName'],
+        grade: studentData['grade'],
+        classNum: studentData['classNum'],
+        studentNum: studentData['studentNum'],
+        studentId: studentId,
+        gender: studentData['gender'],
+        isApproved: true,
+      );
     } catch (e) {
       print('학생 로그인 오류: $e');
       rethrow;
@@ -367,31 +403,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String newPassword,
   }) async {
     try {
-      // 교사 권한 확인
-      final currentUser = _firebaseAuth.currentUser;
-      if (currentUser == null) {
-        throw Exception('로그인이 필요합니다.');
-      }
-
-      final teacherId = currentUser.uid;
-      final teacherDoc = await _usersCollection.doc(teacherId).get();
-      final teacherData = teacherDoc.data() as Map<String, dynamic>;
-
-      if (teacherData['role'] != 'teacher') {
-        throw Exception('교사만 학생 비밀번호를 초기화할 수 있습니다.');
-      }
-
-      // 학생 정보 확인
-      final studentDoc = await _studentsCollection.doc(studentId).get();
-      final studentData = studentDoc.data() as Map<String, dynamic>;
-
-      if (studentData['teacherId'] != teacherId) {
-        throw Exception('자신의 학급 학생만 비밀번호를 초기화할 수 있습니다.');
-      }
-
-      // 관리자 권한으로 비밀번호 초기화 (실제로는 Firebase Admin SDK가 필요)
-      // 여기서는 사용자 인증 토큰을 사용한 서버 측 코드가 필요합니다
-      throw UnimplementedError('Firebase Admin SDK가 필요한 기능입니다.');
+      // Cloud Functions를 사용하여 학생 비밀번호 초기화
+      await _cloudFunctionsService.resetStudentPassword(
+        studentId: studentId,
+        newPassword: newPassword,
+      );
     } catch (e) {
       print('학생 비밀번호 초기화 오류: $e');
       rethrow;

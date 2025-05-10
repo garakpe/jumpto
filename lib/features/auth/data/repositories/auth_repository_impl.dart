@@ -84,13 +84,13 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Either<Failure, User>> signInStudent({
-    required String schoolId,
+    required String schoolName,
     required String studentId,
     required String password,
   }) async {
     try {
       final user = await _remoteDataSource.signInStudent(
-        schoolId: schoolId,
+        schoolName: schoolName,
         studentId: studentId,
         password: password,
       );

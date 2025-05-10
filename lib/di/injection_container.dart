@@ -82,7 +82,7 @@ Future<void> init() async {
   // Features - Auth
   // Data Sources
   sl.registerLazySingleton<AuthRemoteDataSource>(
-    () => AuthRemoteDataSourceImpl(sl(), sl()),
+    () => AuthRemoteDataSourceImpl(sl(), sl(), sl()),
   );
   sl.registerLazySingleton<AuthLocalDataSource>(
     () => AuthLocalDataSourceImpl(sharedPreferences: sl()),

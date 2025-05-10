@@ -30,14 +30,14 @@ class _LoginPageState extends State<LoginPage> {
   // 컨트롤러
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _schoolIdController = TextEditingController();
+  final _schoolNameController = TextEditingController();
   final _studentIdController = TextEditingController();
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _schoolIdController.dispose();
+    _schoolNameController.dispose();
     _studentIdController.dispose();
     super.dispose();
   }
@@ -179,13 +179,13 @@ class _LoginPageState extends State<LoginPage> {
     return Column(
       children: [
         AppTextField(
-          label: '학교 코드',
-          hintText: '학교 코드를 입력하세요',
-          controller: _schoolIdController,
+          label: '학교명',
+          hintText: '학교 이름을 입력하세요',
+          controller: _schoolNameController,
           prefixIcon: const Icon(Icons.school),
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return '학교 코드를 입력해주세요';
+              return '학교명을 입력해주세요';
             }
             return null;
           },
@@ -238,7 +238,7 @@ class _LoginPageState extends State<LoginPage> {
   void _onStudentLogin() {
     if (_formKey.currentState!.validate()) {
       context.read<AuthCubit>().signInStudent(
-        schoolId: _schoolIdController.text.trim(),
+        schoolName: _schoolNameController.text.trim(),
         studentId: _studentIdController.text.trim(),
         password: _passwordController.text,
       );

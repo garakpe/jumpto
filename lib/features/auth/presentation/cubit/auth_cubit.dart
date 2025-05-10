@@ -185,7 +185,7 @@ class AuthCubit extends Cubit<AuthState> {
 
   /// 학생 로그인
   Future<void> signInStudent({
-    required String schoolId,
+    required String schoolName,
     required String studentId,
     required String password,
   }) async {
@@ -193,7 +193,7 @@ class AuthCubit extends Cubit<AuthState> {
 
     final result = await _signInStudent(
       SignInStudentParams(
-        schoolId: schoolId,
+        schoolName: schoolName,
         studentId: studentId,
         password: password,
       ),

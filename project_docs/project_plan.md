@@ -211,15 +211,37 @@
   - SchoolCubit 및 관련 컴포넌트 등록
   - MultiBlocProvider에 SchoolCubit 추가
 
+### 완료된 작업 (학생 인증 시스템)
+
+- Cloud Functions 구현 완료
+  - createStudentAuthAccount: 학생 Firestore 문서 생성 시 Firebase Authentication 계정 자동 생성
+  - resetStudentPassword: 교사가 학생 비밀번호를 초기화하기 위한 함수
+  - updateStudentGender: 학생이 마이페이지에서 성별 정보 업데이트를 위한 함수
+  - studentLogin: 학생이 학교명과 학번으로 로그인할 수 있는 함수
+  - createBulkStudentAccounts: 교사가 학생 명단을 일괄 업로드할 때 호출되는 함수
+- 클라이언트 측 Cloud Functions 연동 구현
+  - CloudFunctionsService 클래스 확장
+  - 학생 로그인, 비밀번호 초기화, 성별 업데이트 기능 구현
+- 클린 아키텍처에 맞는 연동 구현
+  - AuthRemoteDataSource에 Cloud Functions 연동
+  - SignInStudent 유스케이스에 학교명 기반 로그인 적용
+  - 학생 로그인 UI 수정
+  
 ### 다음 예정 작업
 
 - Cloud Functions 배포 및 테스트
   - Firebase CLI를 이용한 함수 배포
   - 학생 계정 자동 생성 및 비밀번호 초기화 테스트
   - 성별 업데이트 기능 테스트
+  - 학생 로그인 기능 테스트
 - 학번(studentId)과 학생 번호(studentNum) 구분 확실한 적용
   - 전체 프로젝트에서 일관된 용어 사용
   - UI/UX에서 학생에게 표시되는 학번/학생번호 용어 통일
+- 학교 관련 필드 통일 완료
+  - schoolId 필드를 학교 코드 뒤 4자리 숫자로 통일
+  - schoolName 필드를 학교명으로 통일
+  - 학생 인증용 이메일 형식 변경: "(연도 두자리)(학번)@school(학교코드 뒤 4자리).com"
+    - 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com
 - 교사 대시보드에 학생 비밀번호 초기화 기능 추가
   - 학생 관리 화면에 비밀번호 초기화 버튼 추가
   - 초기화 확인 모달 구현
@@ -248,7 +270,14 @@
 
 ### 새로 추가된 내용
 
-- 학생 로그인 유스케이스(SignInStudent) 추가
+- 로그인/인증 관련 코드 리팩토링
+  - 중복된 LoginWithEmailPassword 유스케이스 제거 (사용하지 않는 파일 정리)
+  - 학생 이메일 형식 통일: "(연도 두자리)(학번)@school(학교코드 뒤 4자리).com"
+    - 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com
+  - User 및 UserModel 클래스에 schoolName 필드 추가
+  - AuthRemoteDataSource 클래스 이메일 생성 로직 수정
+  - 학생 여부에 따른 적절한 로그인 처리 개선
+- 학생 로그인 유스케이스(SignInStudent) 구현
 - 관리자 관련 기능 구현
   - 관리자 역할 추가 (UserRole enum 수정)
   - 관리자 도메인 모델 구현 (AdminRepository 등)
