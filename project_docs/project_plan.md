@@ -1,26 +1,4 @@
-### 최근 완료된 작업 (학생 인증 시스템 개선)
-
-- Student 엔티티 개선
-  - authUid 필드 추가 (Firebase Authentication UID 연결)
-  - email 필드 추가 (시스템 생성 이메일)
-  - updatedAt 필드 추가 (마지막 수정 일시)
-- StudentModel 개선
-  - 새로운 필드를 만들고 Firestore에 저장하는 로직 추가
-  - 시스템 생성 이메일 시스템 구현 (학번@학교코드.school 형식)
-- StudentRemoteDataSource 개선
-  - Firebase Authentication 연동 추가
-  - 학생 일괄 업로드 시 Firebase Authentication 계정 자동 생성
-  - 학생 성별 업데이트 기능 추가
-- Cloud Functions 구현
-  - createStudentAuthAccount: 학생 Firestore 문서 생성 시 Firebase Authentication 계정 자동 생성
-  - resetStudentPassword: 교사가 학생 비밀번호 초기화
-  - updateStudentGender: 학생 성별 정보 업데이트
-- CloudFunctionsService 구현
-  - Cloud Functions를 호출할 수 있는 서비스 클래스 구현
-  - 비밀번호 초기화 및 성별 업데이트 기능 구현
-- StudentCubit 개선
-  - UpdateStudentGender 유스케이스 통합
-  - 성별 업데이트 기능 추가# 온라인 팝스(PAPS) 교육 플랫폼 개발 계획
+# 온라인 팝스(PAPS) 교육 플랫폼 개발 계획
 
 ## 프로젝트 개요
 
@@ -268,6 +246,18 @@
   - StudentRemoteDataSourceImpl 클래스의 이메일 생성 및 인증 로직 수정
   - CloudFunctionsService의 초기 비밀번호 설정 변경
 
+### 최근 완료된 작업 (CORS 문제 해결 및 Cloud Functions 개선)
+
+- studentLogin 함수 수정
+  - 학생 로그인 API를 HTTP 요청에서 Callable 함수로 변경
+  - CORS 이슈 해결 (Access-Control-Allow-Origin 헤더 문제)
+- CloudFunctionsService 클래스 개선
+  - studentLogin 메서드를 직접 HTTP 호출에서 `httpsCallable` 사용으로 변경
+  - 클린 아키텍처 원칙에 맞게 인터페이스 일관성 확보
+- Firebase 함수 개선
+  - Cloud Function 함수의 일관성 확보 (모두 Callable 함수로 통일)
+  - 에러 처리 로직 개선
+
 ### 다음 예정 작업
 
 - Cloud Functions 배포 및 테스트
@@ -308,6 +298,7 @@
 - 로그인 후 라우팅 문제: LoginPage와 RegisterPage에서 인증 성공 후 '/content-selection'으로 이동해야 하는데 '/home'으로 직접 이동하는 문제 ✅
 - student_remote_datasource.dart에서 FirebaseFunctions 임포트 누락 문제 ✅
 - sign_in_student.dart와 auth_repository.dart 간의 메서드 파라미터 불일치 문제 (studentNum vs studentId) ✅
+- 학생 로그인 시 HTTP 직접 호출로 인한 CORS 이슈 발생 ✅
 
 ### 새로 추가된 내용
 
@@ -363,6 +354,10 @@
   - StudentRepository 구현
   - 학생 업로드 화면 구현
   - 학생 마이페이지 구현
+- CORS 문제 해결 ✅
+  - 직접 HTTP 호출 대신 Firebase SDK `httpsCallable` 사용 ✅
+  - studentLogin 함수 타입 변경 (HTTP 요청 → Callable 함수) ✅
+  - 일관된 Cloud Functions 처리 방식 적용 ✅
 
 ### 테스트 계정 정보
 

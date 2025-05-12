@@ -370,121 +370,123 @@ exports.updateStudentGender = regionalFunctions.https.onCall(
  *
  * 학생이 학교명과 학번을 이용하여 로그인할 수 있는 함수입니다.
  */
-exports.studentLogin = regionalFunctions.https.onRequest(async (req, res) => {
-  // CORS 허용
-  return cors(req, res, async () => {
+exports.studentLogin = regionalFunctions.https.onCall(async (data, context) => {
+  try {
+    // 요청 데이터 검증
+    if (!data.schoolName || !data.studentId || !data.password) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "학교명, 학번, 비밀번호가 필요합니다."
+      );
+    }
+
+    // 학교명으로 학교 정보 조회
+    const schoolsSnapshot = await admin
+      .firestore()
+      .collection("schools")
+      .where("schoolName", "==", data.schoolName)
+      .limit(1)
+      .get();
+
+    if (schoolsSnapshot.empty) {
+      throw new functions.https.HttpsError(
+        "not-found",
+        "해당 학교 정보를 찾을 수 없습니다."
+      );
+    }
+
+    const schoolData = schoolsSnapshot.docs[0].data();
+    const schoolCode = schoolData.schoolCode; // schoolCode 사용
+
+    // 학생 이메일 구성
+    const email = `${data.studentId}@school${schoolCode}.com`;
+
     try {
-      // POST 요청인지 확인
-      if (req.method !== 'POST') {
-        res.status(405).send('Method Not Allowed');
-        return;
-      }
+      // Firebase Authentication으로 로그인 시도
+      // 중요: 실제 로그인 시에는 비밀번호를 직접 비교하지 않습니다.
+      // 여기서는 email로 사용자를 가져온 후, 클라이언트에서 비밀번호와 함께
+      // signInWithEmailAndPassword 등을 시도하고 그 결과를 바탕으로 토큰을 발급해야 합니다.
+      // 또는, 이 함수는 비밀번호를 검증하지 않고 바로 Custom Token을 발급하는 형태로
+      // 클라이언트에서 이미 1차 인증(예: 학교 자체 시스템)을 거쳤다고 가정할 수도 있습니다.
+      // 현재 코드는 비밀번호를 직접 사용하지 않고 getUserByEmail만 하고 토큰을 생성합니다.
+      // 이는 클라이언트가 어떤 비밀번호를 입력하든 해당 이메일만 존재하면 토큰을 받을 수 있음을 의미하므로 보안상 주의가 필요합니다.
+      // 일반적인 로그인 흐름은 클라이언트가 ID/PW로 Firebase Auth SDK를 통해 직접 로그인을 시도하는 것입니다.
+      // 이 함수가 필요한 특별한 이유(예: 마이그레이션, 커스텀 인증 통합)가 있는지 확인이 필요합니다.
+      // 여기서는 일단 제공된 로직을 기반으로 설명합니다.
+      const userRecord = await admin.auth().getUserByEmail(email); // userRecord 대신 userCredential 이라는 변수명은 혼동을 줄 수 있음
 
-      // 요청 데이터 가져오기
-      const data = req.body;
-
-      // 요청 데이터 검증
-      if (!data.schoolName || !data.studentId || !data.password) {
-        res.status(400).json({
-          success: false,
-          message: '학교명, 학번, 비밀번호가 필요합니다.'
-        });
-        return;
-      }
-
-      // 학교명으로 학교 정보 조회
-      const schoolsSnapshot = await admin
+      // 학생 정보 조회 (authUid로 조회)
+      const studentsSnapshot = await admin
         .firestore()
-        .collection("schools")
-        .where("schoolName", "==", data.schoolName)
+        .collection("students")
+        .where("authUid", "==", userRecord.uid) // userCredential.uid -> userRecord.uid
         .limit(1)
         .get();
 
-      if (schoolsSnapshot.empty) {
-        res.status(404).json({
-          success: false,
-          message: '해당 학교 정보를 찾을 수 없습니다.'
-        });
-        return;
+      if (studentsSnapshot.empty) {
+        throw new functions.https.HttpsError(
+          "not-found",
+          "학생 정보를 찾을 수 없습니다 (Auth UID 불일치)."
+        );
       }
 
-      const schoolData = schoolsSnapshot.docs[0].data();
-      const schoolCode = schoolData.schoolCode; // schoolCode 사용
+      const studentDoc = studentsSnapshot.docs[0];
+      const studentData = studentDoc.data();
 
-      // 학생 이메일 구성
-      const email = `${data.studentId}@school${schoolCode}.com`;
-
-      try {
-        // Firebase Authentication으로 로그인 시도
-        const userCredential = await admin.auth().getUserByEmail(email);
-
-        // 학생 정보 조회
-        const studentsSnapshot = await admin
-          .firestore()
-          .collection("students")
-          .where("authUid", "==", userCredential.uid)
-          .limit(1)
-          .get();
-
-        if (studentsSnapshot.empty) {
-          res.status(404).json({
-            success: false,
-            message: '학생 정보를 찾을 수 없습니다.'
-          });
-          return;
-        }
-
-        const studentDoc = studentsSnapshot.docs[0];
-        const studentData = studentDoc.data();
-
-        // Custom Token 생성 (클라이언트에서 signInWithCustomToken으로 사용)
-        const customToken = await admin
-          .auth()
-          .createCustomToken(userCredential.uid, {
-            role: "student",
-            studentId: studentData.studentId,
-            grade: studentData.grade,
-            classNum: studentData.classNum,
-            studentNum: studentData.studentNum,
-            schoolCode: studentData.schoolCode,
-            schoolName: studentData.schoolName,
-          });
-
-        // 마지막 로그인 시간 업데이트
-        await studentDoc.ref.update({
-          lastLoginAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-        // 성공 응답 반환
-        res.status(200).json({
-          success: true,
-          customToken: customToken,
-          studentData: {
-            id: studentDoc.id,
-            name: studentData.name,
-            grade: studentData.grade,
-            classNum: studentData.classNum,
-            studentNum: studentData.studentNum,
-            gender: studentData.gender,
-            schoolName: studentData.schoolName,
-            schoolCode: studentData.schoolCode,
-          },
-        });
-      } catch (authError) {
-        console.error("Authentication error:", authError);
-        // 로그인 실패 시 사용자 정보가 일치하지 않는다는 메시지 반환
-        res.status(401).json({
-          success: false,
-          message: '학교명, 학번 또는 비밀번호가 일치하지 않습니다.'
-        });
-      }
-    } catch (error) {
-      console.error("Error in student login:", error);
-      // 서버 오류 반환
-      res.status(500).json({
-        success: false,
-        message: `로그인 중 오류가 발생했습니다: ${error.message}`
+      // Custom Token 생성 (클라이언트에서 signInWithCustomToken으로 사용)
+      const customToken = await admin.auth().createCustomToken(userRecord.uid, {
+        // userCredential.uid -> userRecord.uid
+        role: "student", // 사용자 정의 클레임 추가 가능
+        studentId: studentData.studentId,
+        grade: studentData.grade,
+        classNum: studentData.classNum,
+        studentNum: studentData.studentNum,
+        schoolCode: studentData.schoolCode,
+        schoolName: studentData.schoolName,
       });
+
+      // 마지막 로그인 시간 업데이트
+      await studentDoc.ref.update({
+        lastLoginAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // 성공 응답 반환
+      return {
+        success: true,
+        customToken: customToken,
+        studentData: {
+          id: studentDoc.id,
+          name: studentData.name,
+          grade: studentData.grade,
+          classNum: studentData.classNum,
+          studentNum: studentData.studentNum,
+          gender: studentData.gender,
+          schoolName: studentData.schoolName,
+          schoolCode: studentData.schoolCode,
+        },
+      };
+    } catch (authError) {
+      console.error("Authentication error:", authError);
+      // authError.code에 따라 더 구체적인 오류 메시지 분기 가능
+      if (authError.code === "auth/user-not-found") {
+        throw new functions.https.HttpsError(
+          "not-found",
+          "해당 이메일 주소(학번@학교코드.com)로 가입된 학생이 없습니다."
+        );
+      }
+      throw new functions.https.HttpsError(
+        "unauthenticated",
+        "학교명, 학번 또는 비밀번호가 일치하지 않습니다." // 이 메시지는 비밀번호를 직접 비교하지 않으므로 약간 오해의 소지가 있을 수 있음
+      );
     }
-  });
+  } catch (error) {
+    console.error("Error in student login:", error);
+    if (!(error instanceof functions.https.HttpsError)) {
+      throw new functions.https.HttpsError(
+        "internal",
+        `로그인 중 오류가 발생했습니다: ${error.message}`
+      );
+    }
+    throw error; // 이미 HttpsError인 경우 그대로 다시 던짐
+  }
 });

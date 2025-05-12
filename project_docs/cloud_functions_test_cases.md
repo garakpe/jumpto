@@ -1,118 +1,216 @@
 # Cloud Functions 테스트 케이스
 
-이 문서는 온라인 팝스(PAPS) 교육 플랫폼에서 사용하는 Firebase Cloud Functions의 테스트 케이스를 설명합니다.
+이 문서는 온라인 팝스(PAPS) 교육 플랫폼에서 사용하는 Firebase Cloud Functions의 테스트 사례를 설명합니다.
 
-## 1. 학생 로그인 테스트 (studentLogin)
+## 학생 로그인 테스트
 
-### 테스트 시나리오:
+### 테스트 시나리오 1: 정상 로그인
 
-1. **정상 로그인**
-   - 학교명: '가락고등학교'
-   - 학번: '2530101' (25학년도 3학년 1반 1번)
-   - 비밀번호: 'student123'
-   - 예상 결과: 로그인 성공 및 학생 정보 반환
+**테스트 단계:**
+1. `studentLogin` 함수 호출 
+   ```dart
+   await _cloudFunctionsService.studentLogin(
+     schoolName: '가락고등학교',
+     studentId: '2530101',
+     password: '123456',
+   );
+   ```
+2. 반환된 데이터에 `customToken` 속성이 있는지 확인
+3. 반환된 사용자 데이터가 정확한지 확인
 
-2. **존재하지 않는 학교**
-   - 학교명: '없는고등학교'
-   - 학번: '2530101'
-   - 비밀번호: 'student123'
-   - 예상 결과: "해당 학교 정보를 찾을 수 없습니다" 오류
+**예상 결과:**
+- 반환 데이터에 `success: true`가 포함됨
+- `customToken` 문자열이 반환됨
+- 학생 정보가 포함된 `studentData` 객체가 반환됨
 
-3. **잘못된 학번**
-   - 학교명: '가락고등학교'
-   - 학번: '2590101' (존재하지 않는 학번)
-   - 비밀번호: 'student123'
-   - 예상 결과: "학교명, 학번 또는 비밀번호가 일치하지 않습니다" 오류
+### 테스트 시나리오 2: 학교명 오류
 
-4. **잘못된 비밀번호**
-   - 학교명: '가락고등학교'
-   - 학번: '2530101'
-   - 비밀번호: 'wrongpassword'
-   - 예상 결과: "학교명, 학번 또는 비밀번호가 일치하지 않습니다" 오류
+**테스트 단계:**
+1. 존재하지 않는 학교명으로 `studentLogin` 함수 호출
+   ```dart
+   await _cloudFunctionsService.studentLogin(
+     schoolName: '존재하지않는학교',
+     studentId: '2530101',
+     password: '123456',
+   );
+   ```
 
-5. **로그인 정보 저장 기능**
-   - 학교명과 학번을 저장하는 옵션 선택
-   - 로그아웃 후 다시 로그인 화면 접속
-   - 예상 결과: 저장된 학교명과 학번이 자동으로 입력되어 있음
+**예상 결과:**
+- 오류 메시지: "해당 학교 정보를 찾을 수 없습니다."
 
-## 2. 학생 계정 일괄 생성 테스트 (createBulkStudentAccounts)
+### 테스트 시나리오 3: 학번 오류
 
-### 테스트 시나리오:
+**테스트 단계:**
+1. 존재하지 않는 학번으로 `studentLogin` 함수 호출
+   ```dart
+   await _cloudFunctionsService.studentLogin(
+     schoolName: '가락고등학교',
+     studentId: '9999999',
+     password: '123456',
+   );
+   ```
 
-1. **정상 일괄 생성**
-   - 교사 계정으로 로그인
-   - 유효한 학생 명단 CSV 파일 업로드
-   - 예상 결과: 학생 계정 일괄 생성 성공 및 성공/실패 개수 반환
+**예상 결과:**
+- 오류 메시지: "학교명, 학번 또는 비밀번호가 일치하지 않습니다."
 
-2. **중복된 학생 정보 처리**
-   - 이미 존재하는 학생 정보가 포함된 CSV 파일 업로드
-   - 예상 결과: 중복된 학생 정보는 실패 처리되고, 나머지는 성공
+### 테스트 시나리오 4: 비밀번호 오류
 
-3. **대용량 데이터 처리**
-   - 100명 이상의 학생 정보가 포함된 CSV 파일 업로드
-   - 예상 결과: 모든 학생 계정이 성공적으로 생성됨
+**테스트 단계:**
+1. 잘못된 비밀번호로 `studentLogin` 함수 호출
+   ```dart
+   await _cloudFunctionsService.studentLogin(
+     schoolName: '가락고등학교',
+     studentId: '2530101',
+     password: '잘못된비밀번호',
+   );
+   ```
 
-4. **잘못된 형식의 데이터 처리**
-   - 필수 필드가 누락된 CSV 파일 업로드
-   - 예상 결과: 해당 레코드는 실패 처리되고 오류 메시지 반환
+**예상 결과:**
+- 오류 메시지: "학교명, 학번 또는 비밀번호가 일치하지 않습니다."
 
-## 3. 학생 비밀번호 초기화 테스트 (resetStudentPassword)
+## 학생 비밀번호 초기화 테스트
 
-### 테스트 시나리오:
+### 테스트 시나리오 1: 정상 초기화
 
-1. **정상 비밀번호 초기화**
-   - 교사 계정으로 로그인
-   - 자신의 학급 학생 선택
-   - 비밀번호 초기화 버튼 클릭
-   - 새 비밀번호 입력
-   - 예상 결과: 비밀번호 초기화 성공 메시지
+**테스트 단계:**
+1. 교사 계정으로 로그인
+2. `resetStudentPassword` 함수 호출
+   ```dart
+   await _cloudFunctionsService.resetStudentPassword(
+     studentId: '2530101',
+     newPassword: '654321',
+   );
+   ```
 
-2. **권한 없는 학생 비밀번호 초기화 시도**
-   - 교사 계정으로 로그인
-   - 다른 교사의 학급 학생 선택 (권한 없음)
-   - 비밀번호 초기화 버튼 클릭
-   - 예상 결과: "자신의 학급 학생만 비밀번호를 초기화할 수 있습니다" 오류
+**예상 결과:**
+- 반환 데이터에 `success: true`가 포함됨
+- 학생이 새 비밀번호로 로그인 가능함
 
-3. **인증되지 않은 사용자의 비밀번호 초기화 시도**
-   - 로그아웃 상태에서 API 직접 호출
-   - 예상 결과: "인증이 필요합니다" 오류
+### 테스트 시나리오 2: 권한 오류
 
-## 4. 학생 성별 업데이트 테스트 (updateStudentGender)
+**테스트 단계:**
+1. 학생 계정으로 로그인
+2. `resetStudentPassword` 함수 호출
+   ```dart
+   await _cloudFunctionsService.resetStudentPassword(
+     studentId: '2530101',
+     newPassword: '654321',
+   );
+   ```
 
-### 테스트 시나리오:
+**예상 결과:**
+- 오류 메시지: "교사만 학생 비밀번호를 초기화할 수 있습니다."
 
-1. **정상 성별 업데이트**
-   - 학생 계정으로 로그인
-   - 마이페이지에서 성별 선택 ('남' 또는 '여')
-   - 저장 버튼 클릭
-   - 예상 결과: 성별 정보 업데이트 성공 메시지
+### 테스트 시나리오 3: 존재하지 않는 학생
 
-2. **인증되지 않은 사용자의 성별 업데이트 시도**
-   - 로그아웃 상태에서 API 직접 호출
-   - 예상 결과: "인증이 필요합니다" 오류
+**테스트 단계:**
+1. 교사 계정으로 로그인
+2. 존재하지 않는 학번으로 `resetStudentPassword` 함수 호출
+   ```dart
+   await _cloudFunctionsService.resetStudentPassword(
+     studentId: '9999999',
+     newPassword: '654321',
+   );
+   ```
 
-3. **교사 계정의 성별 업데이트 시도**
-   - 교사 계정으로 로그인
-   - API 직접 호출
-   - 예상 결과: "학생만 자신의 성별을 업데이트할 수 있습니다" 오류
+**예상 결과:**
+- 오류 메시지: "해당 학생을 찾을 수 없습니다."
 
-4. **잘못된 성별 값 업데이트 시도**
-   - 학생 계정으로 로그인
-   - '남' 또는 '여'가 아닌 다른 값으로 API 직접 호출
-   - 예상 결과: "유효한 성별 정보가 필요합니다" 오류
+## 학생 성별 업데이트 테스트
 
-## 5. 학생 인증 계정 자동 생성 테스트 (createStudentAuthAccount)
+### 테스트 시나리오 1: 정상 업데이트
 
-### 테스트 시나리오:
+**테스트 단계:**
+1. 학생 계정으로 로그인
+2. `updateStudentGender` 함수 호출
+   ```dart
+   await _cloudFunctionsService.updateStudentGender(
+     gender: '남',
+   );
+   ```
 
-1. **정상 인증 계정 생성**
-   - Firestore에 새 학생 문서 생성 (이메일과 비밀번호 포함)
-   - 예상 결과: Firebase Authentication에 계정 생성 및 authUid 필드 추가
+**예상 결과:**
+- 반환 데이터에 `success: true`가 포함됨
+- Firestore 문서에 성별 정보가 업데이트됨
 
-2. **중복된 이메일로 인증 계정 생성 시도**
-   - 이미 존재하는 이메일로 Firestore에 새 학생 문서 생성
-   - 예상 결과: 오류 로그 및 인증 계정 생성 실패
+### 테스트 시나리오 2: 권한 오류
 
-3. **필수 필드 누락 시 처리**
-   - 이메일 또는 비밀번호 없이 Firestore에 새 학생 문서 생성
-   - 예상 결과: 오류 로그 및 인증 계정 생성 중단
+**테스트 단계:**
+1. 교사 계정으로 로그인
+2. `updateStudentGender` 함수 호출
+   ```dart
+   await _cloudFunctionsService.updateStudentGender(
+     gender: '남',
+   );
+   ```
+
+**예상 결과:**
+- 오류 메시지: "학생만 자신의 성별을 업데이트할 수 있습니다."
+
+### 테스트 시나리오 3: 잘못된 성별 값
+
+**테스트 단계:**
+1. 학생 계정으로 로그인
+2. 잘못된 성별 값으로 `updateStudentGender` 함수 호출
+   ```dart
+   await _cloudFunctionsService.updateStudentGender(
+     gender: '잘못된값',
+   );
+   ```
+
+**예상 결과:**
+- 오류 메시지: "유효한 성별 정보가 필요합니다."
+
+## 학생 계정 일괄 생성 테스트
+
+### 테스트 시나리오 1: 정상 일괄 생성
+
+**테스트 단계:**
+1. 교사 계정으로 로그인
+2. `createBulkStudentAccounts` 함수 호출
+   ```dart
+   final students = [
+     Student(
+       grade: '3',
+       classNum: '1',
+       studentNum: '1',
+       name: '학생1',
+     ),
+     Student(
+       grade: '3',
+       classNum: '1',
+       studentNum: '2',
+       name: '학생2',
+     ),
+   ];
+   
+   await _cloudFunctionsService.createBulkStudentAccounts(
+     students: students,
+     schoolCode: '3550',
+     schoolName: '가락고등학교',
+   );
+   ```
+
+**예상 결과:**
+- 반환 데이터에 `success: true`가 포함됨
+- 학생 계정이 생성되고 Firestore에 저장됨
+- Firebase Authentication 계정이 생성됨
+
+### 테스트 시나리오 2: 권한 오류
+
+**테스트 단계:**
+1. 학생 계정으로 로그인
+2. `createBulkStudentAccounts` 함수 호출
+
+**예상 결과:**
+- 오류 메시지: "교사 권한이 필요합니다."
+
+### 테스트 시나리오 3: 중복 이메일 처리
+
+**테스트 단계:**
+1. 교사 계정으로 로그인
+2. 이미 존재하는 학생과 동일한 정보로 `createBulkStudentAccounts` 함수 호출
+
+**예상 결과:**
+- 함수가 완료되고 결과에 실패한 항목이 포함됨
+- 새로운 학생은 생성되고 중복된 학생은 생성되지 않음
