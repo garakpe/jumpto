@@ -88,13 +88,13 @@ class StudentLoginForm extends StatefulWidget {
 
 class _StudentLoginFormState extends State<StudentLoginForm> {
   final _formKey = GlobalKey<FormState>();
-  final _schoolIdController = TextEditingController();
+  final _schoolCodeController = TextEditingController();
   final _studentNumController = TextEditingController();
   final _passwordController = TextEditingController();
 
   @override
   void dispose() {
-    _schoolIdController.dispose();
+    _schoolCodeController.dispose();
     _studentNumController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -109,7 +109,7 @@ class _StudentLoginFormState extends State<StudentLoginForm> {
           AppTextField(
             label: '학교 코드',
             hintText: '학교 코드를 입력하세요',
-            controller: _schoolIdController,
+            controller: _schoolCodeController,
             prefixIcon: const Icon(Icons.school),
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -157,7 +157,7 @@ class _StudentLoginFormState extends State<StudentLoginForm> {
     if (_formKey.currentState!.validate()) {
       // 학생 로그인 기능 구현 예정
       // context.read<AuthCubit>().signInStudent(
-      //   schoolId: _schoolIdController.text.trim(),
+      //   schoolCode: _schoolCodeController.text.trim(),
       //   studentNum: _studentNumController.text.trim(),
       //   password: _passwordController.text,
       // );

@@ -18,12 +18,16 @@ class SchoolSelector extends StatefulWidget {
   /// 직접 입력 옵션 제공 여부
   final bool allowCustomInput;
   
+  /// 초기 선택 학교
+  final School? initialSchool;
+  
   /// 생성자
   const SchoolSelector({
     Key? key,
     required this.onSchoolSelected,
     this.hintText = '학교를 선택하세요',
     this.allowCustomInput = true,
+    this.initialSchool,
   }) : super(key: key);
 
   @override
@@ -44,11 +48,27 @@ class _SchoolSelectorState extends State<SchoolSelector> {
   
   // 학교명 변경 콜백 함수
   void _onSchoolNameChanged() {
-    if (_selectedRegion != null && !_useCustomInput) {
+    print('학교명 변경됨: ${_schoolNameController.text}');
+    
+    // 선택된 학교가 있고, 입력된 텍스트가 선택된 학교와 일치하면 검색 건너뛰기
+    if (_selectedSchool != null && _selectedSchool!.name == _schoolNameController.text) {
+      return;
+    }
+    
+    if (!_useCustomInput && _selectedRegion != null && _schoolNameController.text.isNotEmpty) {
+      setState(() {
+        _isSearching = true;
+        _selectedSchool = null; // 새로운 검색이 시작되면 선택된 학교 초기화
+      });
+      
       context.read<SchoolCubit>().searchSchoolsByName(
         _selectedRegion!,
         _schoolNameController.text,
       );
+    } else {
+      setState(() {
+        _isSearching = false;
+      });
     }
   }
   
@@ -57,18 +77,26 @@ class _SchoolSelectorState extends State<SchoolSelector> {
     super.initState();
     context.read<SchoolCubit>().loadRegions();
     
+    // 초기 학교가 있으면 설정
+    if (widget.initialSchool != null) {
+      _selectedSchool = widget.initialSchool;
+      _schoolNameController.text = widget.initialSchool!.name;
+      _selectedRegion = widget.initialSchool!.region;
+    }
+    
     // 학교명 컨트롤러에 리스너 등록
     _schoolNameController.addListener(_onSchoolNameChanged);
     
     _focusNode.addListener(() {
       setState(() {
-        _isSearching = _focusNode.hasFocus && !_useCustomInput;
+        _isSearching = _focusNode.hasFocus && !_useCustomInput && _schoolNameController.text.isNotEmpty;
       });
     });
   }
   
   @override
   void dispose() {
+    _schoolNameController.removeListener(_onSchoolNameChanged);
     _schoolNameController.dispose();
     _customRegionController.dispose();
     _customSchoolNameController.dispose();
@@ -370,17 +398,15 @@ class _SchoolSelectorState extends State<SchoolSelector> {
               color: Colors.transparent,
               child: InkWell(
                 onTap: () {
-                  // 학교 선택 시 입력 필드에 학교 이름 반영
                   print('학교 선택: ${school.name}');
                   
-                  // 먼저 리스너 제거 후 텍스트 설정 (즉시)
+                  // 먼저 리스너 제거 (중요)
                   _schoolNameController.removeListener(_onSchoolNameChanged);
-                  _schoolNameController.text = school.name;
                   
-                  // 상태 업데이트
                   setState(() {
                     _selectedSchool = school;
-                    _isSearching = false;
+                    _schoolNameController.text = school.name; // setState 내부에서 값 설정
+                    _isSearching = false; // 검색 UI 닫기
                   });
                   
                   // 콜백 호출
@@ -389,7 +415,7 @@ class _SchoolSelectorState extends State<SchoolSelector> {
                   // 포커스 해제
                   _focusNode.unfocus();
                   
-                  // 리스너 다시 추가 (지연시켜서 추가하여 불필요한 검색 방지)
+                  // 리스너 다시 추가 (미세 지연 후)
                   Future.microtask(() {
                     _schoolNameController.addListener(_onSchoolNameChanged);
                   });

@@ -9,16 +9,16 @@ import '../repositories/auth_repository.dart';
 /// 교사 회원가입 유스케이스
 class RegisterTeacher implements UseCase<User, RegisterTeacherParams> {
   final AuthRepository repository;
-  
+
   RegisterTeacher(this.repository);
-  
+
   @override
   Future<Either<Failure, User>> call(RegisterTeacherParams params) async {
     return await repository.signUpTeacher(
       email: params.email,
       password: params.password,
       displayName: params.displayName,
-      schoolId: params.schoolId,
+      schoolCode: params.schoolCode,
       phoneNumber: params.phoneNumber,
     );
   }
@@ -29,20 +29,27 @@ class RegisterTeacherParams extends Equatable {
   final String email;
   final String password;
   final String displayName;
-  final String? schoolId;
+  final String? schoolCode;
   final String? phoneNumber;
-  
+
   const RegisterTeacherParams({
     required this.email,
     required this.password,
     required this.displayName,
-    this.schoolId,
+    this.schoolCode,
     this.phoneNumber,
   });
-  
+
   @override
-  List<Object?> get props => [email, password, displayName, schoolId, phoneNumber];
-  
+  List<Object?> get props => [
+    email,
+    password,
+    displayName,
+    schoolCode,
+    phoneNumber,
+  ];
+
   @override
-  String toString() => 'RegisterTeacherParams(email: $email, displayName: $displayName)';
+  String toString() =>
+      'RegisterTeacherParams(email: $email, displayName: $displayName)';
 }

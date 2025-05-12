@@ -11,7 +11,7 @@ abstract class StudentRepository {
   Future<Either<Failure, List<Student>>> getStudentsByTeacherId(String teacherId);
   
   /// 특정 학교의 학생 조회
-  Future<Either<Failure, List<Student>>> getStudentsBySchoolId(String schoolId);
+  Future<Either<Failure, List<Student>>> getStudentsBySchoolCode(String schoolCode);
   
   /// 특정 학급의 학생 조회
   Future<Either<Failure, List<Student>>> getStudentsByClass(String teacherId, String grade, String classNum);

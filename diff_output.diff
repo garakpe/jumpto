@@ -71,7 +71,7 @@ index 91cdc6a..56c836b 100644
 +  try {
 +    // 교사 정보에서 학교 정보 가져오기
 +    const teacherData = teacherDoc.data();
-+    const schoolId = teacherData.schoolId;
++    const schoolCode = teacherData.schoolCode;
 +    const schoolName = teacherData.schoolName;
 +    
 +    // 학생 생성 결과 저장할 배열
@@ -96,7 +96,7 @@ index 91cdc6a..56c836b 100644
 +        // 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com
 +        const currentYear = new Date().getFullYear().toString().substr(-2); // 현재 연도의 마지막 2자리
 +        const studentId = `${currentYear}${student.grade}${student.classNum.toString().padStart(2, '0')}${student.studentNum.toString().padStart(2, '0')}`;
-+        const email = `${studentId}@school${schoolId}.com`;
++        const email = `${studentId}@school${schoolCode}.com`;
 +        const initialPassword = data.initialPassword || 'student123'; // 기본 비밀번호
 +
 +        // Firestore에 학생 정보 저장
@@ -111,7 +111,7 @@ index 91cdc6a..56c836b 100644
 +
 +        // 학생 정보 저장
 +        await studentRef.set({
-+          schoolId: schoolId,
++          schoolCode: schoolCode,
 +          schoolName: schoolName,
 +          grade: student.grade,
 +          classNum: student.classNum,
@@ -198,10 +198,10 @@ index 91cdc6a..56c836b 100644
 +    }
 +
 +    const schoolData = schoolsSnapshot.docs[0].data();
-+    const schoolId = schoolData.schoolId; // schoolId 사용
++    const schoolCode = schoolData.schoolCode; // schoolCode 사용
 +
 +    // 학생 이메일 구성
-+    const email = `${data.studentId}@school${schoolId}.com`;
++    const email = `${data.studentId}@school${schoolCode}.com`;
 +
 +    try {
 +      // Firebase Authentication으로 로그인 시도
@@ -231,7 +231,7 @@ index 91cdc6a..56c836b 100644
 +        grade: studentData.grade,
 +        classNum: studentData.classNum,
 +        studentNum: studentData.studentNum,
-+        schoolId: studentData.schoolId,
++        schoolCode: studentData.schoolCode,
 +        schoolName: studentData.schoolName
 +      });
 +
@@ -251,7 +251,7 @@ index 91cdc6a..56c836b 100644
 +          studentNum: studentData.studentNum,
 +          gender: studentData.gender,
 +          schoolName: studentData.schoolName,
-+          schoolId: studentData.schoolId
++          schoolCode: studentData.schoolCode
 +        }
 +      };
 +    } catch (authError) {
@@ -301,7 +301,7 @@ index 740e4f3..2bcc498 100644
 +/// 여러 학생 계정을 한번에 생성함
 +Future<Map<String, dynamic>> createBulkStudentAccounts({
 +  required List<Student> students,
-+  required String schoolId,
++  required String schoolCode,
 +  required String schoolName,
 +  String initialPassword = 'student123',
 +}) async {
@@ -317,7 +317,7 @@ index 740e4f3..2bcc498 100644
 +    
 +    final result = await _functions.httpsCallable('createBulkStudentAccounts').call({
 +      'students': studentsList,
-+      'schoolId': schoolId,
++      'schoolCode': schoolCode,
 +      'schoolName': schoolName,
 +      'initialPassword': initialPassword,
 +    });
@@ -387,7 +387,7 @@ index 3b064dd..8853e5e 100644
  
    /// 학번/비밀번호로 학생 로그인
    Future<domain.User> signInStudent({
--    required String schoolId,
+-    required String schoolCode,
 +    required String schoolName,
      required String studentId,
      required String password,
@@ -416,7 +416,7 @@ index 3b064dd..8853e5e 100644
 @@ -112,6 +118,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
          displayName: userData['displayName'],
          role: role,
-         schoolId: userData['schoolId'],
+         schoolCode: userData['schoolCode'],
 +        schoolName: userData['schoolName'],
          classNum: userData['classNum'],
          studentNum: userData['studentNum'],
@@ -424,7 +424,7 @@ index 3b064dd..8853e5e 100644
 @@ -193,12 +200,22 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
        }
  
-       final schoolId = teacherData['schoolId'];
+       final schoolCode = teacherData['schoolCode'];
 +      final schoolName = teacherData['schoolName'] ?? '';
 +
 +      // 학년 가져오기 (학급에서 추출)
@@ -436,18 +436,18 @@ index 3b064dd..8853e5e 100644
        // 비밀번호 설정 (기본값: 학번)
        final password = initialPassword ?? studentNum;
  
--      // 학생 이메일 형식 (예: schoolId-classNum-studentNum@school.com)
--      final studentEmail = '$schoolId-$classNum-$studentNum@school.com';
+-      // 학생 이메일 형식 (예: schoolCode-classNum-studentNum@school.com)
+-      final studentEmail = '$schoolCode-$classNum-$studentNum@school.com';
 +      // 학생 이메일 형식: "(연도 두자리)(학번)@school(학교코드 뒤 4자리).com"
 +      // 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com
 +      final DateTime now = DateTime.now();
 +      final String currentYearSuffix = now.year.toString().substring(2);
-+      final studentEmail = '$currentYearSuffix$studentId@school$schoolId.com';
++      final studentEmail = '$currentYearSuffix$studentId@school$schoolCode.com';
  
        // Firebase Auth로 학생 계정 생성
        final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
 @@ -216,7 +233,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
-         'schoolId': schoolId,
+         'schoolCode': schoolCode,
          'classNum': classNum,
          'studentNum': studentNum,
 -        'studentId': '$classNum$studentNum',
@@ -458,7 +458,7 @@ index 3b064dd..8853e5e 100644
 @@ -227,9 +244,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
          'email': studentEmail,
          'displayName': displayName,
-         'schoolId': schoolId,
+         'schoolCode': schoolCode,
 +        'schoolName': schoolName,
          'classNum': classNum,
          'studentNum': studentNum,
@@ -470,7 +470,7 @@ index 3b064dd..8853e5e 100644
 @@ -242,9 +260,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
          displayName: displayName,
          role: domain.UserRole.student,
-         schoolId: schoolId,
+         schoolCode: schoolCode,
 +        schoolName: schoolName,
          classNum: classNum,
          studentNum: studentNum,
@@ -483,7 +483,7 @@ index 3b064dd..8853e5e 100644
  
    @override
    Future<domain.User> signInStudent({
--    required String schoolId,
+-    required String schoolCode,
 +    required String schoolName,
      required String studentId,
      required String password,
@@ -493,7 +493,7 @@ index 3b064dd..8853e5e 100644
 -      // 실제 구현에서는 학급 정보도 필요할 수 있음
 -      final query =
 -          await _studentsCollection
--              .where('schoolId', isEqualTo: schoolId)
+-              .where('schoolCode', isEqualTo: schoolCode)
 -              .where('studentId', isEqualTo: studentId)
 -              .get();
 -
@@ -528,7 +528,7 @@ index 3b064dd..8853e5e 100644
 +        email: firebaseUser.email ?? '$studentId@school.com',
 +        displayName: studentData['name'],
 +        role: domain.UserRole.student,
-+        schoolId: studentData['schoolId'],
++        schoolCode: studentData['schoolCode'],
 +        schoolName: studentData['schoolName'],
 +        grade: studentData['grade'],
 +        classNum: studentData['classNum'],
@@ -586,13 +586,13 @@ index cae2782..0f5cd23 100644
      final studentId = '$grade$classNum$studentNum';
      
 -    // 시스템 생성 이메일 형식: 학번@학교코드.school
--    final email = '$studentId@$schoolId.school';
+-    final email = '$studentId@$schoolCode.school';
 +    // 시스템 생성 이메일 형식: "(연도 두자리)(학번)@school(학교코드 뒤 4자리).com"
 +    // 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com
 +    // 현재 연도에서 뒤 두자리 가져오기 (2025 → 25)
 +    final DateTime now = DateTime.now();
 +    final String currentYearSuffix = now.year.toString().substring(2);
-+    final email = '$currentYearSuffix$studentId@school$schoolId.com';
++    final email = '$currentYearSuffix$studentId@school$schoolCode.com';
      
      return StudentModel(
        id: map['id'] ?? '', // Firestore에서 자동 생성될 ID
@@ -603,7 +603,7 @@ index e980796..cfa96e7 100644
 @@ -9,6 +9,7 @@ class UserModel extends User {
      required super.displayName,
      required super.role,
-     super.schoolId,
+     super.schoolCode,
 +    super.schoolName,
      super.classNum,
      super.studentNum,
@@ -611,7 +611,7 @@ index e980796..cfa96e7 100644
 @@ -25,6 +26,7 @@ class UserModel extends User {
        displayName: json['displayName'] as String? ?? '',
        role: role,
-       schoolId: json['schoolId'] as String?,
+       schoolCode: json['schoolCode'] as String?,
 +      schoolName: json['schoolName'] as String?,
        classNum: json['classNum'] as String?,
        studentNum: json['studentNum'] as String?,
@@ -619,7 +619,7 @@ index e980796..cfa96e7 100644
 @@ -39,6 +41,7 @@ class UserModel extends User {
        'displayName': displayName,
        'role': role == UserRole.teacher ? 'teacher' : 'student',
-       'schoolId': schoolId,
+       'schoolCode': schoolCode,
 +      'schoolName': schoolName,
        'classNum': classNum,
        'studentNum': studentNum,
@@ -627,7 +627,7 @@ index e980796..cfa96e7 100644
 @@ -60,6 +63,7 @@ class UserModel extends User {
        role: role,
        displayName: userData['displayName'] as String? ?? '',
-       schoolId: userData['schoolId'] as String?,
+       schoolCode: userData['schoolCode'] as String?,
 +      schoolName: userData['schoolName'] as String?,
        classNum: userData['classNum'] as String?,
        studentNum: userData['studentNum'] as String?,
@@ -635,7 +635,7 @@ index e980796..cfa96e7 100644
 @@ -74,6 +78,7 @@ class UserModel extends User {
        displayName: user.displayName,
        role: user.role,
-       schoolId: user.schoolId,
+       schoolCode: user.schoolCode,
 +      schoolName: user.schoolName,
        classNum: user.classNum,
        studentNum: user.studentNum,
@@ -648,14 +648,14 @@ index 05d33da..873e465 100644
  
    @override
    Future<Either<Failure, User>> signInStudent({
--    required String schoolId,
+-    required String schoolCode,
 +    required String schoolName,
      required String studentId,
      required String password,
    }) async {
      try {
        final user = await _remoteDataSource.signInStudent(
--        schoolId: schoolId,
+-        schoolCode: schoolCode,
 +        schoolName: schoolName,
          studentId: studentId,
          password: password,
@@ -698,7 +698,7 @@ index 14aba84..5f5772a 100644
 -  
 +
    /// 학교 ID (선택)
-   final String? schoolId;
+   final String? schoolCode;
 -  
 +
 +  /// 학교명 (선택)
@@ -737,7 +737,7 @@ index 14aba84..5f5772a 100644
 @@ -56,6 +62,8 @@ class User {
      required this.displayName,
      required this.role,
-     this.schoolId,
+     this.schoolCode,
 +    this.schoolName,
 +    this.grade,
      this.classNum,
@@ -800,7 +800,7 @@ index a628d3c..e408a03 100644
  
    /// 학번/비밀번호로 학생 로그인
    Future<Either<Failure, User>> signInStudent({
--    required String schoolId,
+-    required String schoolCode,
 +    required String schoolName,
      required String studentId,
      required String password,
@@ -854,20 +854,20 @@ index a1aa2f2..596d929 100644
  
  /// 학생 로그인을 위한 파라미터
  class SignInStudentParams extends Equatable {
--  final String schoolId;
+-  final String schoolCode;
 +  final String schoolName;
    final String studentId;
    final String password;
  
    const SignInStudentParams({
--    required this.schoolId,
+-    required this.schoolCode,
 +    required this.schoolName,
      required this.studentId,
      required this.password,
    });
  
    @override
--  List<Object?> get props => [schoolId, studentId, password];
+-  List<Object?> get props => [schoolCode, studentId, password];
 +  List<Object?> get props => [schoolName, studentId, password];
  }
  
@@ -876,7 +876,7 @@ index a1aa2f2..596d929 100644
    @override
    Future<Either<Failure, User>> call(SignInStudentParams params) {
      return _repository.signInStudent(
--      schoolId: params.schoolId,
+-      schoolCode: params.schoolCode,
 +      schoolName: params.schoolName,
        studentId: params.studentId,
        password: params.password,
@@ -889,7 +889,7 @@ index 08b211f..34edcdf 100644
  
    /// 학생 로그인
    Future<void> signInStudent({
--    required String schoolId,
+-    required String schoolCode,
 +    required String schoolName,
      required String studentId,
      required String password,
@@ -898,7 +898,7 @@ index 08b211f..34edcdf 100644
  
      final result = await _signInStudent(
        SignInStudentParams(
--        schoolId: schoolId,
+-        schoolCode: schoolCode,
 +        schoolName: schoolName,
          studentId: studentId,
          password: password,
@@ -911,7 +911,7 @@ index b53c15b..2859e62 100644
    // 컨트롤러
    final _emailController = TextEditingController();
    final _passwordController = TextEditingController();
--  final _schoolIdController = TextEditingController();
+-  final _schoolCodeController = TextEditingController();
 +  final _schoolNameController = TextEditingController();
    final _studentIdController = TextEditingController();
  
@@ -919,7 +919,7 @@ index b53c15b..2859e62 100644
    void dispose() {
      _emailController.dispose();
      _passwordController.dispose();
--    _schoolIdController.dispose();
+-    _schoolCodeController.dispose();
 +    _schoolNameController.dispose();
      _studentIdController.dispose();
      super.dispose();
@@ -930,7 +930,7 @@ index b53c15b..2859e62 100644
          AppTextField(
 -          label: '학교 코드',
 -          hintText: '학교 코드를 입력하세요',
--          controller: _schoolIdController,
+-          controller: _schoolCodeController,
 +          label: '학교명',
 +          hintText: '학교 이름을 입력하세요',
 +          controller: _schoolNameController,
@@ -946,7 +946,7 @@ index b53c15b..2859e62 100644
    void _onStudentLogin() {
      if (_formKey.currentState!.validate()) {
        context.read<AuthCubit>().signInStudent(
--        schoolId: _schoolIdController.text.trim(),
+-        schoolCode: _schoolCodeController.text.trim(),
 +        schoolName: _schoolNameController.text.trim(),
          studentId: _studentIdController.text.trim(),
          password: _passwordController.text,
@@ -1209,7 +1209,7 @@ index 84014a8..097763d 100644
    - 전체 프로젝트에서 일관된 용어 사용
    - UI/UX에서 학생에게 표시되는 학번/학생번호 용어 통일
 +- 학교 관련 필드 통일 완료
-+  - schoolId 필드를 학교 코드 뒤 4자리 숫자로 통일
++  - schoolCode 필드를 학교 코드 뒤 4자리 숫자로 통일
 +  - schoolName 필드를 학교명으로 통일
 +  - 학생 인증용 이메일 형식 변경: "(연도 두자리)(학번)@school(학교코드 뒤 4자리).com"
 +    - 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com

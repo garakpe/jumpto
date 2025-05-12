@@ -12,8 +12,8 @@ abstract class StudentRemoteDataSource {
   /// 교사 ID로 학생 목록 조회
   Future<List<StudentModel>> getStudentsByTeacherId(String teacherId);
   
-  /// 학교 ID로 학생 목록 조회
-  Future<List<StudentModel>> getStudentsBySchoolId(String schoolId);
+  /// 학교 코드로 학생 목록 조회
+  Future<List<StudentModel>> getStudentsBySchoolCode(String schoolCode);
   
   /// 학급(교사ID, 학년, 반)으로 학생 목록 조회
   Future<List<StudentModel>> getStudentsByClass(String teacherId, String grade, String classNum);
@@ -74,11 +74,11 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
   }
   
   @override
-  Future<List<StudentModel>> getStudentsBySchoolId(String schoolId) async {
+  Future<List<StudentModel>> getStudentsBySchoolCode(String schoolCode) async {
     try {
       final querySnapshot = await _firestore
           .collection('students')
-          .where('schoolId', isEqualTo: schoolId)
+          .where('schoolCode', isEqualTo: schoolCode)
           .get();
       
       return querySnapshot.docs
@@ -166,7 +166,7 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
           studentNum: student.studentNum,
           studentId: student.studentId,
           teacherId: student.teacherId,
-          schoolId: student.schoolId,
+          schoolCode: student.schoolCode,
           schoolName: student.schoolName,
           attendance: student.attendance,
           createdAt: student.createdAt,

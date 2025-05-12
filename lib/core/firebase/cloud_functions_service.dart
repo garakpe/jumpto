@@ -38,7 +38,7 @@ class CloudFunctionsService {
   /// 여러 학생 계정을 한번에 생성함
   Future<Map<String, dynamic>> createBulkStudentAccounts({
     required List<Student> students,
-    required String schoolId,
+    required String schoolCode,
     required String schoolName,
     String initialPassword = 'student123',
   }) async {
@@ -54,7 +54,7 @@ class CloudFunctionsService {
       
       final result = await _functions.httpsCallable('createBulkStudentAccounts').call({
         'students': studentsList,
-        'schoolId': schoolId,
+        'schoolCode': schoolCode,
         'schoolName': schoolName,
         'initialPassword': initialPassword,
       });

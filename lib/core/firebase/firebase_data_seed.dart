@@ -71,7 +71,7 @@ class FirebaseDataSeed {
     const email = 'student1@school.com';
     const password = 'student123';
     const displayName = '테스트 학생';
-    const schoolId = 'school1';
+    const schoolCode = 'school1';
     const studentNum = '1';
 
     try {
@@ -102,7 +102,7 @@ class FirebaseDataSeed {
                 'email': email,
                 'displayName': displayName,
                 'isTeacher': false,
-                'schoolId': schoolId,
+                'schoolCode': schoolCode,
                 'studentNum': studentNum,
                 'grade': 1,
                 'gender': 'male',
@@ -112,10 +112,10 @@ class FirebaseDataSeed {
           // 학교 및 학생 맵핑 정보 저장
           await _firestore
               .collection('school_students')
-              .doc('$schoolId-$studentNum')
+              .doc('$schoolCode-$studentNum')
               .set({
                 'userId': userCredential.user!.uid,
-                'schoolId': schoolId,
+                'schoolCode': schoolCode,
                 'studentNum': studentNum,
                 'email': email,
               });

@@ -14,7 +14,7 @@ abstract class AuthRemoteDataSource {
     required String email,
     required String password,
     required String displayName,
-    String? schoolId,
+    String? schoolCode,
     String? phoneNumber,
   });
 
@@ -117,7 +117,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         email: userData['email'],
         displayName: userData['displayName'],
         role: role,
-        schoolId: userData['schoolId'],
+        schoolCode: userData['schoolCode'],
         schoolName: userData['schoolName'],
         classNum: userData['classNum'],
         studentNum: userData['studentNum'],
@@ -137,7 +137,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String email,
     required String password,
     required String displayName,
-    String? schoolId,
+    String? schoolCode,
     String? phoneNumber,
   }) async {
     try {
@@ -154,7 +154,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'email': email,
         'displayName': displayName,
         'role': 'teacher',
-        'schoolId': schoolId,
+        'schoolCode': schoolCode,
         'phoneNumber': phoneNumber,
         'createdAt': FieldValue.serverTimestamp(),
       });
@@ -165,7 +165,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         email: email,
         displayName: displayName,
         role: domain.UserRole.teacher,
-        schoolId: schoolId,
+        schoolCode: schoolCode,
         phoneNumber: phoneNumber,
       );
     } catch (e) {
@@ -199,7 +199,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         throw Exception('교사만 학생 계정을 생성할 수 있습니다.');
       }
 
-      final schoolId = teacherData['schoolId'];
+      final schoolCode = teacherData['schoolCode'];
       final schoolName = teacherData['schoolName'] ?? '';
 
       // 학년 가져오기 (학급에서 추출)
@@ -215,7 +215,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       // 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com
       final DateTime now = DateTime.now();
       final String currentYearSuffix = now.year.toString().substring(2);
-      final studentEmail = '$currentYearSuffix$studentId@school$schoolId.com';
+      final studentEmail = '$currentYearSuffix$studentId@school$schoolCode.com';
 
       // Firebase Auth로 학생 계정 생성
       final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
@@ -230,7 +230,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'email': studentEmail,
         'displayName': displayName,
         'role': 'student',
-        'schoolId': schoolId,
+        'schoolCode': schoolCode,
         'classNum': classNum,
         'studentNum': studentNum,
         'studentId': studentId,
@@ -243,7 +243,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       await _studentsCollection.doc(uid).set({
         'email': studentEmail,
         'displayName': displayName,
-        'schoolId': schoolId,
+        'schoolCode': schoolCode,
         'schoolName': schoolName,
         'classNum': classNum,
         'studentNum': studentNum,
@@ -259,7 +259,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         email: studentEmail,
         displayName: displayName,
         role: domain.UserRole.student,
-        schoolId: schoolId,
+        schoolCode: schoolCode,
         schoolName: schoolName,
         classNum: classNum,
         studentNum: studentNum,
@@ -340,7 +340,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         email: firebaseUser.email ?? '$studentId@school.com',
         displayName: studentData['name'],
         role: domain.UserRole.student,
-        schoolId: studentData['schoolId'],
+        schoolCode: studentData['schoolCode'],
         schoolName: studentData['schoolName'],
         grade: studentData['grade'],
         classNum: studentData['classNum'],

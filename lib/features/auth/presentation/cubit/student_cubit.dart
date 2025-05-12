@@ -254,7 +254,7 @@ class StudentCubit extends Cubit<StudentState> {
             studentNum: formattedStudentNum,
             studentId: studentId, // 5자리 학번
             teacherId: currentUser.id,
-            schoolId: currentUser.schoolId ?? '', // 교사 정보에서 가져오기
+            schoolCode: currentUser.schoolCode ?? '', // 교사 정보에서 가져오기
             schoolName:
                 currentUser
                     .displayName ?? // User 엔티티에 schoolName이 없어서 displayName으로 대체

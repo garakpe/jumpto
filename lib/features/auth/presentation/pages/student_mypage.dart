@@ -114,7 +114,7 @@ class _StudentMyPageState extends State<StudentMyPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '학교: ${user.schoolId ?? ""}',
+                          '학교: ${user.schoolCode ?? ""}',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         const SizedBox(height: 4),

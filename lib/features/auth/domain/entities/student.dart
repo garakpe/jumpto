@@ -31,8 +31,8 @@ class Student extends Equatable {
   /// 관리 교사 ID
   final String teacherId;
   
-  /// 학교 ID
-  final String schoolId;
+  /// 학교 코드
+  final String schoolCode;
   
   /// 학교 이름
   final String schoolName;
@@ -62,7 +62,7 @@ class Student extends Equatable {
     required this.studentNum,
     required this.studentId,
     required this.teacherId,
-    required this.schoolId,
+    required this.schoolCode,
     required this.schoolName,
     this.attendance = true,
     required this.createdAt,
@@ -74,7 +74,7 @@ class Student extends Equatable {
   @override
   List<Object?> get props => [
     id, authUid, email, name, grade, classNum, studentNum, 
-    studentId, teacherId, schoolId, schoolName,
+    studentId, teacherId, schoolCode, schoolName,
     attendance, createdAt, updatedAt, gender
   ];
 }

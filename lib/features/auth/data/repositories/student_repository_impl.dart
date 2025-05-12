@@ -28,9 +28,9 @@ class StudentRepositoryImpl implements StudentRepository {
   }
 
   @override
-  Future<Either<Failure, List<Student>>> getStudentsBySchoolId(String schoolId) async {
+  Future<Either<Failure, List<Student>>> getStudentsBySchoolCode(String schoolCode) async {
     try {
-      final students = await remoteDataSource.getStudentsBySchoolId(schoolId);
+      final students = await remoteDataSource.getStudentsBySchoolCode(schoolCode);
       return Right(students);
     } on ServerException catch (e) {
       return Left(ServerFailure(message: e.message));

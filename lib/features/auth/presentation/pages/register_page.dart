@@ -27,28 +27,17 @@ class _RegisterPageState extends State<RegisterPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _schoolNameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   // 선택된 학교 정보 저장
   School? _selectedSchool;
-  
-  @override
-  void initState() {
-    super.initState();
-    // _schoolNameController의 변경 감지 후 화면 업데이트
-    _schoolNameController.addListener(() {
-      print('학교 이름 필드 변경: ${_schoolNameController.text}');
-    });
-  }
-  
+
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _schoolNameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -57,9 +46,7 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('교사 회원가입'),
-      ),
+      appBar: AppBar(title: const Text('교사 회원가입')),
       body: BlocConsumer<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
@@ -80,7 +67,7 @@ class _RegisterPageState extends State<RegisterPage> {
           if (state is AuthLoading) {
             return const LoadingView(message: '회원가입 진행 중...');
           }
-          
+
           return SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -91,7 +78,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     // 헤더
                     const LoginHeader(),
                     const SizedBox(height: 32),
-                    
+
                     // 회원가입 폼
                     Form(
                       key: _formKey,
@@ -123,16 +110,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                 hintText: '근무 중인 학교를 선택하세요',
                                 allowCustomInput: true,
                                 onSchoolSelected: (school) {
-                                  print('학교 선택 콜백: ${school?.name ?? "null"}');
+                                  print('학교 선택 콜백 (RegisterPage): ${school?.name ?? "null"}');
                                   setState(() {
                                     _selectedSchool = school;
-                                    if (school != null) {
-                                      // 학교 이름을 설정하는 작업은 school_selector.dart에서 처리
-                                      // 이미 컨트롤러가 school.name으로 설정됨
-                                      print('학교 이름 선택됨: ${school.name}');
-                                    } else {
-                                      _schoolNameController.text = '';
-                                    }
                                   });
                                 },
                               ),
@@ -176,9 +156,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 return '핸드폰 번호를 입력해주세요';
                               }
                               // 핸드폰 번호 형식 검사 (숫자와 하이픈만)
-                              final phoneRegExp = RegExp(
-                                r'^010-\d{4}-\d{4}$',
-                              );
+                              final phoneRegExp = RegExp(r'^010-\d{4}-\d{4}$');
                               if (!phoneRegExp.hasMatch(value)) {
                                 return '유효한 핸드폰 번호 형식이 아닙니다 (예: 010-1234-5678)';
                               }
@@ -200,14 +178,22 @@ class _RegisterPageState extends State<RegisterPage> {
                                 return '비밀번호는 6자 이상이어야 합니다';
                               }
                               // 비밀번호 복잡성 검사 (선택적)
-                              final hasUppercase = value.contains(RegExp(r'[A-Z]'));
-                              final hasDigits = value.contains(RegExp(r'[0-9]'));
-                              final hasSpecialCharacters = value.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
-                              
-                              if (!hasUppercase && !hasDigits && !hasSpecialCharacters) {
+                              final hasUppercase = value.contains(
+                                RegExp(r'[A-Z]'),
+                              );
+                              final hasDigits = value.contains(
+                                RegExp(r'[0-9]'),
+                              );
+                              final hasSpecialCharacters = value.contains(
+                                RegExp(r'[!@#$%^&*(),.?":{}|<>]'),
+                              );
+
+                              if (!hasUppercase &&
+                                  !hasDigits &&
+                                  !hasSpecialCharacters) {
                                 return '대문자, 숫자, 특수문자 중 하나 이상을 포함해주세요';
                               }
-                              
+
                               return null;
                             },
                           ),
@@ -229,7 +215,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             },
                           ),
                           const SizedBox(height: 16),
-                          
+
                           // 승인 필요 안내 메시지
                           Container(
                             padding: const EdgeInsets.all(12),
@@ -251,7 +237,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               ],
                             ),
                           ),
-                          
+
                           const SizedBox(height: 24),
                           AppButton(
                             text: '회원가입',
@@ -261,7 +247,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         ],
                       ),
                     ),
-                    
+
                     // 로그인 화면으로 돌아가기
                     const SizedBox(height: 16),
                     Row(
@@ -283,24 +269,34 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
     );
   }
-  
+
   void _register() {
     if (_formKey.currentState!.validate()) {
-      print('등록 시 학교 이름: ${_schoolNameController.text}');
       print('등록 시 학교 객체: ${_selectedSchool?.name}');
-    
+
+      // 학교 선택 확인
+      if (_selectedSchool == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('학교를 선택해주세요'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       // 학교 정보 처리 - 선택된 학교가 있으면 학교 코드 사용
-      final schoolId = _selectedSchool?.code != null 
-          ? (_selectedSchool!.code != 'custom' ? _selectedSchool!.code : _selectedSchool!.name)
-          : _schoolNameController.text.trim();
-          
+      final schoolCode = _selectedSchool!.code != 'custom'
+          ? _selectedSchool!.code
+          : _selectedSchool!.name;
+
       final phoneNumber = _phoneController.text.trim();
-      
+
       context.read<AuthCubit>().registerTeacher(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         displayName: _nameController.text.trim(),
-        schoolId: schoolId,
+        schoolCode: schoolCode,
         phoneNumber: phoneNumber,
       );
     }
@@ -311,30 +307,32 @@ class _RegisterPageState extends State<RegisterPage> {
 class _PhoneNumberFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue, 
-    TextEditingValue newValue
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
   ) {
     // 숫자만 추출
     final digitsOnly = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
-    
+
     final String newText;
     final int selectionIndex;
-    
+
     // 자동 하이픈 추가
     if (digitsOnly.length >= 8) {
       // 010-1234-5678 형식
-      newText = '${digitsOnly.substring(0, 3)}-${digitsOnly.substring(3, 7)}-${digitsOnly.substring(7, digitsOnly.length.clamp(0, 11))}';
+      newText =
+          '${digitsOnly.substring(0, 3)}-${digitsOnly.substring(3, 7)}-${digitsOnly.substring(7, digitsOnly.length.clamp(0, 11))}';
       selectionIndex = newText.length;
     } else if (digitsOnly.length >= 4) {
       // 010-1234 형식
-      newText = '${digitsOnly.substring(0, 3)}-${digitsOnly.substring(3, digitsOnly.length)}';
+      newText =
+          '${digitsOnly.substring(0, 3)}-${digitsOnly.substring(3, digitsOnly.length)}';
       selectionIndex = newText.length;
     } else {
       // 숫자만 표시
       newText = digitsOnly;
       selectionIndex = newText.length;
     }
-    
+
     return TextEditingValue(
       text: newText,
       selection: TextSelection.collapsed(offset: selectionIndex),

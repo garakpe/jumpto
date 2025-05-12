@@ -226,7 +226,7 @@
   - AuthRemoteDataSource에 Cloud Functions 연동
   - SignInStudent 유스케이스에 학교명 기반 로그인 적용
   - 학생 로그인 UI 수정
-  
+
 ### 최근 완료된 작업 (인증 관련 버그 수정)
 
 - CloudFunctionsService 클래스 구조 수정
@@ -243,6 +243,20 @@
   - CloudFunctionsService 올바른 주입 및 사용
   - import 경로 수정
 
+### 최근 완료된 작업 (학교 선택기 버그 수정) ✅
+
+- SchoolSelector 위젯 수정
+  - 학교 선택 후 UI 업데이트 문제 해결
+  - 리스너 관리 로직 개선
+  - 학교 선택 시 _schoolNameController 업데이트 문제 수정
+  - 선택된 학교가 있을 때 중복 검색 방지 로직 추가
+  - 초기 학교 설정 기능 추가
+- RegisterPage 수정
+  - 학교 선택 기능 개선
+  - _schoolNameController 직접 참조 제거
+  - _selectedSchool 상태에 의존하도록 수정
+  - 학교 선택 필수 유효성 검사 추가
+
 ### 다음 예정 작업
 
 - Cloud Functions 배포 및 테스트
@@ -254,9 +268,10 @@
   - 전체 프로젝트에서 일관된 용어 사용
   - UI/UX에서 학생에게 표시되는 학번/학생번호 용어 통일
 - 학교 관련 필드 통일 완료
-  - schoolId 필드를 학교 코드 뒤 4자리 숫자로 통일
+  - schoolCode에서 schoolCode로 모든 필드명 변경
+  - schoolCode 필드를 학교 코드 뒤 4자리 숫자로 통일
   - schoolName 필드를 학교명으로 통일
-  - 학생 인증용 이메일 형식 변경: "(연도 두자리)(학번)@school(학교코드 뒤 4자리).com"
+  - 학생 인증용 이메일 형식: "(연도 두자리)(학번)@school(학교코드 뒤 4자리).com"
     - 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com
 - 교사 대시보드에 학생 비밀번호 초기화 기능 추가
   - 학생 관리 화면에 비밀번호 초기화 버튼 추가

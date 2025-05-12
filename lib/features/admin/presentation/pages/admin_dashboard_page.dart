@@ -20,13 +20,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   @override
   void initState() {
     super.initState();
-    
+
     // 페이지 로드 시 승인 대기 중인 교사 목록 조회
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AdminCubit>().getPendingTeachers();
     });
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -79,18 +79,19 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           if (state is AdminLoading) {
             return const Center(child: CircularProgressIndicator());
           }
-          
+
           // 교사 목록 상태 처리
           if (state is TeachersLoaded) {
-            final pendingTeachers = state.teachers.where((teacher) => !teacher.isApproved).toList();
-            
+            final pendingTeachers =
+                state.teachers.where((teacher) => !teacher.isApproved).toList();
+
             if (pendingTeachers.isEmpty) {
               return _buildEmptyState();
             }
-            
+
             return _buildTeachersList(pendingTeachers);
           }
-          
+
           // 기본 상태
           return _buildEmptyState();
         },
@@ -105,25 +106,18 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       ),
     );
   }
-  
+
   /// 빈 상태 위젯
   Widget _buildEmptyState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.check_circle_outline,
-            size: 80,
-            color: Colors.grey,
-          ),
+          const Icon(Icons.check_circle_outline, size: 80, color: Colors.grey),
           const SizedBox(height: 16),
           const Text(
             '승인 대기 중인 교사가 없습니다.',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey,
-            ),
+            style: TextStyle(fontSize: 18, color: Colors.grey),
           ),
           const SizedBox(height: 24),
           ElevatedButton(
@@ -131,16 +125,14 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               // 모든 교사 목록 조회
               context.read<AdminCubit>().getAllTeachers();
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
             child: const Text('모든 교사 보기'),
           ),
         ],
       ),
     );
   }
-  
+
   /// 교사 목록 위젯
   Widget _buildTeachersList(List<User> teachers) {
     return Column(
@@ -169,7 +161,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             ],
           ),
         ),
-        
+
         // 목록
         Expanded(
           child: ListView.builder(
@@ -184,15 +176,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 child: ListTile(
                   title: Text(
                     teacher.displayName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('이메일: ${teacher.email ?? "없음"}'),
-                      Text('학교: ${teacher.schoolId ?? "없음"}'),
+                      Text('학교: ${teacher.schoolCode ?? "없음"}'),
                       Text('연락처: ${teacher.phoneNumber ?? "없음"}'),
                     ],
                   ),
@@ -212,10 +202,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       ),
                       // 거부 버튼
                       IconButton(
-                        icon: const Icon(
-                          Icons.cancel,
-                          color: Colors.red,
-                        ),
+                        icon: const Icon(Icons.cancel, color: Colors.red),
                         onPressed: () {
                           _showRejectConfirmDialog(context, teacher);
                         },
@@ -230,85 +217,82 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       ],
     );
   }
-  
+
   /// 로그아웃 확인 다이얼로그
   void _showLogoutConfirmDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('로그아웃'),
-        content: const Text('정말 로그아웃하시겠습니까?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('로그아웃'),
+            content: const Text('정말 로그아웃하시겠습니까?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  context.read<AdminCubit>().signOut();
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('로그아웃'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<AdminCubit>().signOut();
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
-            child: const Text('로그아웃'),
-          ),
-        ],
-      ),
     );
   }
-  
+
   /// 교사 승인 확인 다이얼로그
   void _showApproveConfirmDialog(BuildContext context, User teacher) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('교사 승인'),
-        content: Text('${teacher.displayName} 교사를 승인하시겠습니까?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('교사 승인'),
+            content: Text('${teacher.displayName} 교사를 승인하시겠습니까?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  context.read<AdminCubit>().approveTeacher(teacher.id);
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.green),
+                child: const Text('승인'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<AdminCubit>().approveTeacher(teacher.id);
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.green,
-            ),
-            child: const Text('승인'),
-          ),
-        ],
-      ),
     );
   }
-  
+
   /// 교사 거부 확인 다이얼로그
   void _showRejectConfirmDialog(BuildContext context, User teacher) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('교사 거부'),
-        content: Text('${teacher.displayName} 교사 계정을 거부/삭제하시겠습니까?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('교사 거부'),
+            content: Text('${teacher.displayName} 교사 계정을 거부/삭제하시겠습니까?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  context.read<AdminCubit>().rejectTeacher(teacher.id);
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('거부/삭제'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<AdminCubit>().rejectTeacher(teacher.id);
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
-            child: const Text('거부/삭제'),
-          ),
-        ],
-      ),
     );
   }
 }

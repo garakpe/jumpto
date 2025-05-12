@@ -28,8 +28,8 @@ class User {
   /// 사용자 역할
   final UserRole role;
 
-  /// 학교 ID (선택)
-  final String? schoolId;
+  /// 학교 코드 (선택)
+  final String? schoolCode;
 
   /// 학교명 (선택)
   final String? schoolName;
@@ -61,7 +61,7 @@ class User {
     this.email,
     required this.displayName,
     required this.role,
-    this.schoolId,
+    this.schoolCode,
     this.schoolName,
     this.grade,
     this.classNum,

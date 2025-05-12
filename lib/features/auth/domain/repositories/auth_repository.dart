@@ -13,7 +13,7 @@ abstract class AuthRepository {
     required String email,
     required String password,
     required String displayName,
-    String? schoolId,
+    String? schoolCode,
     String? phoneNumber,
   });
 
