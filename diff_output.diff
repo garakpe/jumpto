@@ -1,0 +1,1234 @@
+diff --git a/firebase/functions/index.js b/firebase/functions/index.js
+index 91cdc6a..56c836b 100644
+--- a/firebase/functions/index.js
++++ b/firebase/functions/index.js
+@@ -2,13 +2,16 @@ const functions = require('firebase-functions');
+ const admin = require('firebase-admin');
+ admin.initializeApp();
+ 
++// 리전 설정 (asia-northeast3는 서울 리전입니다)
++const regionalFunctions = functions.region('asia-northeast3');
++
+ /**
+  * 학생 계정 생성 함수
+  * 
+  * Firestore 'students' 컬렉션에 문서가 생성될 때 자동으로 트리거되어
+  * 해당 학생의 Firebase Authentication 계정을 생성합니다.
+  */
+-exports.createStudentAuthAccount = functions.firestore
++exports.createStudentAuthAccount = regionalFunctions.firestore
+   .document('students/{studentId}')
+   .onCreate(async (snapshot, context) => {
+     const studentData = snapshot.data();
+@@ -55,7 +58,7 @@ exports.createStudentAuthAccount = functions.firestore
+  * HTTP 요청을 통해 교사가 학생의 비밀번호를 초기화할 수 있습니다.
+  * 인증 및 권한 검증이 포함되어 있습니다.
+  */
+-exports.resetStudentPassword = functions.https.onCall(async (data, context) => {
++exports.resetStudentPassword = regionalFunctions.https.onCall(async (data, context) => {
+   // 인증 여부 확인
+   if (!context.auth) {
+     throw new functions.https.HttpsError(
+@@ -139,12 +142,132 @@ exports.resetStudentPassword = functions.https.onCall(async (data, context) => {
+   }
+ });
+ 
++/**
++ * 학생 계정 일괄 생성 함수
++ * 
++ * 교사가 학생 명단을 업로드할 때 호출되어 여러 학생 계정을 한번에 생성합니다.
++ */
++exports.createBulkStudentAccounts = regionalFunctions.https.onCall(async (data, context) => {
++  // 인증 여부 확인
++  if (!context.auth) {
++    throw new functions.https.HttpsError(
++      'unauthenticated',
++      '인증이 필요합니다.'
++    );
++  }
++
++  // 교사 권한 확인
++  const teacherDoc = await admin.firestore()
++    .collection('users')
++    .doc(context.auth.uid)
++    .get();
++  
++  if (!teacherDoc.exists || teacherDoc.data().role !== 'teacher') {
++    throw new functions.https.HttpsError(
++      'permission-denied',
++      '교사 권한이 필요합니다.'
++    );
++  }
++
++  // 요청 데이터 검증
++  if (!data.students || !Array.isArray(data.students) || data.students.length === 0) {
++    throw new functions.https.HttpsError(
++      'invalid-argument',
++      '유효한 학생 데이터가 필요합니다.'
++    );
++  }
++
++  try {
++    // 교사 정보에서 학교 정보 가져오기
++    const teacherData = teacherDoc.data();
++    const schoolId = teacherData.schoolId;
++    const schoolName = teacherData.schoolName;
++    
++    // 학생 생성 결과 저장할 배열
++    const results = {
++      success: [],
++      failure: []
++    };
++
++    // 각 학생마다 처리
++    for (const student of data.students) {
++      // 필수 필드 확인
++      if (!student.grade || !student.classNum || !student.studentNum || !student.name) {
++        results.failure.push({
++          student: student,
++          error: '필수 정보가 누락되었습니다.'
++        });
++        continue;
++      }
++
++      try {
++        // 이메일 생성 (예: 학번@school학교ID.com 형식)
++        // 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com
++        const currentYear = new Date().getFullYear().toString().substr(-2); // 현재 연도의 마지막 2자리
++        const studentId = `${currentYear}${student.grade}${student.classNum.toString().padStart(2, '0')}${student.studentNum.toString().padStart(2, '0')}`;
++        const email = `${studentId}@school${schoolId}.com`;
++        const initialPassword = data.initialPassword || 'student123'; // 기본 비밀번호
++
++        // Firestore에 학생 정보 저장
++        const studentRef = admin.firestore().collection('students').doc();
++        
++        // 인증 계정 생성
++        const userRecord = await admin.auth().createUser({
++          email: email,
++          password: initialPassword,
++          displayName: student.name
++        });
++
++        // 학생 정보 저장
++        await studentRef.set({
++          schoolId: schoolId,
++          schoolName: schoolName,
++          grade: student.grade,
++          classNum: student.classNum,
++          studentNum: student.studentNum,
++          studentId: studentId,
++          name: student.name,
++          email: email,
++          teacherId: context.auth.uid,
++          authUid: userRecord.uid,
++          gender: student.gender || null, // 성별 정보가 있으면 저장
++          createdAt: admin.firestore.FieldValue.serverTimestamp(),
++          updatedAt: admin.firestore.FieldValue.serverTimestamp()
++        });
++
++        results.success.push({
++          studentId: studentId,
++          email: email,
++          name: student.name
++        });
++      } catch (error) {
++        results.failure.push({
++          student: student,
++          error: error.message
++        });
++      }
++    }
++
++    return {
++      success: true,
++      message: `${results.success.length}명의 학생 계정이 생성되었습니다. (실패: ${results.failure.length}명)`,
++      results: results
++    };
++  } catch (error) {
++    console.error('Error creating bulk student accounts:', error);
++    throw new functions.https.HttpsError(
++      'internal',
++      `학생 계정 일괄 생성 중 오류가 발생했습니다: ${error.message}`
++    );
++  }
++});
++
+ /**
+  * 학생 정보 업데이트 시 성별 저장 함수
+  * 
+  * 학생이 마이페이지에서 성별을 선택하면 이를 저장합니다.
+  */
+-exports.updateStudentGender = functions.https.onCall(async (data, context) => {
++exports.updateStudentGender = regionalFunctions.https.onCall(async (data, context) => {
+   // 인증 여부 확인
+   if (!context.auth) {
+     throw new functions.https.HttpsError(
+@@ -206,3 +329,112 @@ exports.updateStudentGender = functions.https.onCall(async (data, context) => {
+     );
+   }
+ });
++
++/**
++ * 학생 로그인 함수
++ * 
++ * 학생이 학교명과 학번을 이용하여 로그인할 수 있는 함수입니다.
++ */
++exports.studentLogin = regionalFunctions.https.onCall(async (data, context) => {
++  // 요청 데이터 검증
++  if (!data.schoolName || !data.studentId || !data.password) {
++    throw new functions.https.HttpsError(
++      'invalid-argument',
++      '학교명, 학번, 비밀번호가 필요합니다.'
++    );
++  }
++
++  try {
++    // 학교명으로 학교 정보 조회
++    const schoolsSnapshot = await admin.firestore()
++      .collection('schools')
++      .where('schoolName', '==', data.schoolName)
++      .limit(1)
++      .get();
++
++    if (schoolsSnapshot.empty) {
++      throw new functions.https.HttpsError(
++        'not-found',
++        '해당 학교 정보를 찾을 수 없습니다.'
++      );
++    }
++
++    const schoolData = schoolsSnapshot.docs[0].data();
++    const schoolId = schoolData.schoolId; // schoolId 사용
++
++    // 학생 이메일 구성
++    const email = `${data.studentId}@school${schoolId}.com`;
++
++    try {
++      // Firebase Authentication으로 로그인 시도
++      const userCredential = await admin.auth().getUserByEmail(email);
++      
++      // 학생 정보 조회
++      const studentsSnapshot = await admin.firestore()
++        .collection('students')
++        .where('authUid', '==', userCredential.uid)
++        .limit(1)
++        .get();
++
++      if (studentsSnapshot.empty) {
++        throw new functions.https.HttpsError(
++          'not-found',
++          '학생 정보를 찾을 수 없습니다.'
++        );
++      }
++
++      const studentDoc = studentsSnapshot.docs[0];
++      const studentData = studentDoc.data();
++
++      // Custom Token 생성 (클라이언트에서 signInWithCustomToken으로 사용)
++      const customToken = await admin.auth().createCustomToken(userCredential.uid, {
++        role: 'student',
++        studentId: studentData.studentId,
++        grade: studentData.grade,
++        classNum: studentData.classNum,
++        studentNum: studentData.studentNum,
++        schoolId: studentData.schoolId,
++        schoolName: studentData.schoolName
++      });
++
++      // 마지막 로그인 시간 업데이트
++      await studentDoc.ref.update({
++        lastLoginAt: admin.firestore.FieldValue.serverTimestamp()
++      });
++
++      return {
++        success: true,
++        customToken: customToken,
++        studentData: {
++          id: studentDoc.id,
++          name: studentData.name,
++          grade: studentData.grade,
++          classNum: studentData.classNum,
++          studentNum: studentData.studentNum,
++          gender: studentData.gender,
++          schoolName: studentData.schoolName,
++          schoolId: studentData.schoolId
++        }
++      };
++    } catch (authError) {
++      console.error('Authentication error:', authError);
++      // 로그인 실패 시 사용자 정보가 일치하지 않는다는 메시지 반환
++      throw new functions.https.HttpsError(
++        'not-found',
++        '학교명, 학번 또는 비밀번호가 일치하지 않습니다.'
++      );
++    }
++  } catch (error) {
++    console.error('Error in student login:', error);
++    
++    // 이미 HttpsError인 경우 그대로 전달
++    if (error instanceof functions.https.HttpsError) {
++      throw error;
++    }
++    
++    throw new functions.https.HttpsError(
++      'internal',
++      `로그인 중 오류가 발생했습니다: ${error.message}`
++    );
++  }
++});
+diff --git a/lib/core/firebase/cloud_functions_service.dart b/lib/core/firebase/cloud_functions_service.dart
+index 740e4f3..2bcc498 100644
+--- a/lib/core/firebase/cloud_functions_service.dart
++++ b/lib/core/firebase/cloud_functions_service.dart
+@@ -1,4 +1,5 @@
+ import 'package:cloud_functions/cloud_functions.dart';
++import '../../features/auth/domain/entities/student.dart';
+ 
+ /// Cloud Functions 서비스
+ ///
+@@ -27,9 +28,71 @@ class CloudFunctionsService {
+         throw Exception(result.data['message'] ?? '비밀번호 초기화 실패');
+       }
+     } catch (e) {
+-      rethrow;
++    rethrow;
++    }
++}
++
++/// 학생 계정 일괄 생성
++///
++/// 교사가 학생 명단을 업로드할 때 사용
++/// 여러 학생 계정을 한번에 생성함
++Future<Map<String, dynamic>> createBulkStudentAccounts({
++  required List<Student> students,
++  required String schoolId,
++  required String schoolName,
++  String initialPassword = 'student123',
++}) async {
++  try {
++    // 학생 데이터를 Map으로 변환
++    final studentsList = students.map((student) => {
++      'grade': student.grade,
++      'classNum': student.classNum,
++      'studentNum': student.studentNum,
++      'name': student.name,
++      'gender': student.gender,
++    }).toList();
++    
++    final result = await _functions.httpsCallable('createBulkStudentAccounts').call({
++      'students': studentsList,
++      'schoolId': schoolId,
++      'schoolName': schoolName,
++      'initialPassword': initialPassword,
++    });
++    
++    if (result.data['success'] != true) {
++      throw Exception(result.data['message'] ?? '학생 계정 일괄 생성 실패');
+     }
++    
++    return result.data;
++  } catch (e) {
++    rethrow;
+   }
++}
++
++/// 학생 로그인
++///
++/// 학생이 학교명과 학번으로 로그인할 때 사용
++Future<Map<String, dynamic>> studentLogin({
++  required String schoolName,
++  required String studentId,
++  required String password,
++}) async {
++  try {
++    final result = await _functions.httpsCallable('studentLogin').call({
++      'schoolName': schoolName,
++      'studentId': studentId,
++      'password': password,
++    });
++    
++    if (result.data['success'] != true) {
++      throw Exception(result.data['message'] ?? '로그인 실패');
++    }
++    
++    return result.data;
++  } catch (e) {
++    rethrow;
++  }
++}
+   
+   /// 학생 성별 업데이트
+   ///
+diff --git a/lib/di/injection_container.dart b/lib/di/injection_container.dart
+index 0e422b6..615d362 100644
+--- a/lib/di/injection_container.dart
++++ b/lib/di/injection_container.dart
+@@ -82,7 +82,7 @@ Future<void> init() async {
+   // Features - Auth
+   // Data Sources
+   sl.registerLazySingleton<AuthRemoteDataSource>(
+-    () => AuthRemoteDataSourceImpl(sl(), sl()),
++    () => AuthRemoteDataSourceImpl(sl(), sl(), sl()),
+   );
+   sl.registerLazySingleton<AuthLocalDataSource>(
+     () => AuthLocalDataSourceImpl(sharedPreferences: sl()),
+diff --git a/lib/features/auth/data/datasources/auth_remote_data_source.dart b/lib/features/auth/data/datasources/auth_remote_data_source.dart
+index 3b064dd..8853e5e 100644
+--- a/lib/features/auth/data/datasources/auth_remote_data_source.dart
++++ b/lib/features/auth/data/datasources/auth_remote_data_source.dart
+@@ -1,5 +1,6 @@
+ import 'package:cloud_firestore/cloud_firestore.dart';
+ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
++import '../../../../core/firebase/cloud_functions_service.dart';
+ 
+ import '../../domain/entities/user.dart' as domain;
+ 
+@@ -34,7 +35,7 @@ abstract class AuthRemoteDataSource {
+ 
+   /// 학번/비밀번호로 학생 로그인
+   Future<domain.User> signInStudent({
+-    required String schoolId,
++    required String schoolName,
+     required String studentId,
+     required String password,
+   });
+@@ -65,6 +66,7 @@ abstract class AuthRemoteDataSource {
+ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
+   final firebase_auth.FirebaseAuth _firebaseAuth;
+   final FirebaseFirestore _firestore;
++  final CloudFunctionsService _cloudFunctionsService;
+ 
+   /// 사용자 컬렉션 참조
+   CollectionReference get _usersCollection => _firestore.collection('users');
+@@ -73,7 +75,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
+   CollectionReference get _studentsCollection =>
+       _firestore.collection('students');
+ 
+-  AuthRemoteDataSourceImpl(this._firebaseAuth, this._firestore);
++  AuthRemoteDataSourceImpl(
++    this._firebaseAuth,
++    this._firestore,
++    this._cloudFunctionsService,
++  );
+ 
+   @override
+   Future<domain.User?> getCurrentUser() async {
+@@ -112,6 +118,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
+         displayName: userData['displayName'],
+         role: role,
+         schoolId: userData['schoolId'],
++        schoolName: userData['schoolName'],
+         classNum: userData['classNum'],
+         studentNum: userData['studentNum'],
+         studentId: userData['studentId'],
+@@ -193,12 +200,22 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
+       }
+ 
+       final schoolId = teacherData['schoolId'];
++      final schoolName = teacherData['schoolName'] ?? '';
++
++      // 학년 가져오기 (학급에서 추출)
++      final grade = classNum.substring(0, 1);
++
++      // 학번 생성 (grade + classNum + studentNum)
++      final studentId = '$grade$classNum$studentNum';
+ 
+       // 비밀번호 설정 (기본값: 학번)
+       final password = initialPassword ?? studentNum;
+ 
+-      // 학생 이메일 형식 (예: schoolId-classNum-studentNum@school.com)
+-      final studentEmail = '$schoolId-$classNum-$studentNum@school.com';
++      // 학생 이메일 형식: "(연도 두자리)(학번)@school(학교코드 뒤 4자리).com"
++      // 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com
++      final DateTime now = DateTime.now();
++      final String currentYearSuffix = now.year.toString().substring(2);
++      final studentEmail = '$currentYearSuffix$studentId@school$schoolId.com';
+ 
+       // Firebase Auth로 학생 계정 생성
+       final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
+@@ -216,7 +233,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
+         'schoolId': schoolId,
+         'classNum': classNum,
+         'studentNum': studentNum,
+-        'studentId': '$classNum$studentNum',
++        'studentId': studentId,
+         'gender': gender,
+         'teacherId': teacherId,
+         'createdAt': FieldValue.serverTimestamp(),
+@@ -227,9 +244,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
+         'email': studentEmail,
+         'displayName': displayName,
+         'schoolId': schoolId,
++        'schoolName': schoolName,
+         'classNum': classNum,
+         'studentNum': studentNum,
+-        'studentId': '$classNum$studentNum',
++        'studentId': studentId,
+         'gender': gender,
+         'teacherId': teacherId,
+         'createdAt': FieldValue.serverTimestamp(),
+@@ -242,9 +260,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
+         displayName: displayName,
+         role: domain.UserRole.student,
+         schoolId: schoolId,
++        schoolName: schoolName,
+         classNum: classNum,
+         studentNum: studentNum,
+-        studentId: '$classNum$studentNum',
++        studentId: studentId,
+         gender: gender,
+       );
+     } catch (e) {
+@@ -291,28 +310,45 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
+ 
+   @override
+   Future<domain.User> signInStudent({
+-    required String schoolId,
++    required String schoolName,
+     required String studentId,
+     required String password,
+   }) async {
+     try {
+-      // 학생 이메일 형식으로 변환
+-      // 실제 구현에서는 학급 정보도 필요할 수 있음
+-      final query =
+-          await _studentsCollection
+-              .where('schoolId', isEqualTo: schoolId)
+-              .where('studentId', isEqualTo: studentId)
+-              .get();
+-
+-      if (query.docs.isEmpty) {
+-        throw Exception('학생 정보를 찾을 수 없습니다.');
++      // Cloud Functions를 사용하여 학생 로그인
++      final result = await _cloudFunctionsService.studentLogin(
++        schoolName: schoolName,
++        studentId: studentId,
++        password: password,
++      );
++
++      // 커스텀 토큰으로 로그인
++      if (result['customToken'] != null) {
++        await _firebaseAuth.signInWithCustomToken(result['customToken']);
+       }
+ 
+-      final studentData = query.docs.first.data() as Map<String, dynamic>;
+-      final email = studentData['email'];
++      // 인증 후 사용자 정보 가져오기
++      final firebaseUser = _firebaseAuth.currentUser;
++      if (firebaseUser == null) {
++        throw Exception('로그인에 실패했습니다.');
++      }
+ 
+-      // 이메일/비밀번호로 로그인
+-      return signInWithEmailPassword(email: email, password: password);
++      // 학생 정보 구성
++      final studentData = result['studentData'];
++      return domain.User(
++        id: firebaseUser.uid,
++        email: firebaseUser.email ?? '$studentId@school.com',
++        displayName: studentData['name'],
++        role: domain.UserRole.student,
++        schoolId: studentData['schoolId'],
++        schoolName: studentData['schoolName'],
++        grade: studentData['grade'],
++        classNum: studentData['classNum'],
++        studentNum: studentData['studentNum'],
++        studentId: studentId,
++        gender: studentData['gender'],
++        isApproved: true,
++      );
+     } catch (e) {
+       print('학생 로그인 오류: $e');
+       rethrow;
+@@ -367,31 +403,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
+     required String newPassword,
+   }) async {
+     try {
+-      // 교사 권한 확인
+-      final currentUser = _firebaseAuth.currentUser;
+-      if (currentUser == null) {
+-        throw Exception('로그인이 필요합니다.');
+-      }
+-
+-      final teacherId = currentUser.uid;
+-      final teacherDoc = await _usersCollection.doc(teacherId).get();
+-      final teacherData = teacherDoc.data() as Map<String, dynamic>;
+-
+-      if (teacherData['role'] != 'teacher') {
+-        throw Exception('교사만 학생 비밀번호를 초기화할 수 있습니다.');
+-      }
+-
+-      // 학생 정보 확인
+-      final studentDoc = await _studentsCollection.doc(studentId).get();
+-      final studentData = studentDoc.data() as Map<String, dynamic>;
+-
+-      if (studentData['teacherId'] != teacherId) {
+-        throw Exception('자신의 학급 학생만 비밀번호를 초기화할 수 있습니다.');
+-      }
+-
+-      // 관리자 권한으로 비밀번호 초기화 (실제로는 Firebase Admin SDK가 필요)
+-      // 여기서는 사용자 인증 토큰을 사용한 서버 측 코드가 필요합니다
+-      throw UnimplementedError('Firebase Admin SDK가 필요한 기능입니다.');
++      // Cloud Functions를 사용하여 학생 비밀번호 초기화
++      await _cloudFunctionsService.resetStudentPassword(
++        studentId: studentId,
++        newPassword: newPassword,
++      );
+     } catch (e) {
+       print('학생 비밀번호 초기화 오류: $e');
+       rethrow;
+diff --git a/lib/features/auth/data/models/student_model.dart b/lib/features/auth/data/models/student_model.dart
+index cae2782..0f5cd23 100644
+--- a/lib/features/auth/data/models/student_model.dart
++++ b/lib/features/auth/data/models/student_model.dart
+@@ -60,8 +60,12 @@ class StudentModel extends Student {
+     final studentNum = map['studentNum']?.toString().padLeft(2, '0') ?? '';
+     final studentId = '$grade$classNum$studentNum';
+     
+-    // 시스템 생성 이메일 형식: 학번@학교코드.school
+-    final email = '$studentId@$schoolId.school';
++    // 시스템 생성 이메일 형식: "(연도 두자리)(학번)@school(학교코드 뒤 4자리).com"
++    // 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com
++    // 현재 연도에서 뒤 두자리 가져오기 (2025 → 25)
++    final DateTime now = DateTime.now();
++    final String currentYearSuffix = now.year.toString().substring(2);
++    final email = '$currentYearSuffix$studentId@school$schoolId.com';
+     
+     return StudentModel(
+       id: map['id'] ?? '', // Firestore에서 자동 생성될 ID
+diff --git a/lib/features/auth/data/models/user_model.dart b/lib/features/auth/data/models/user_model.dart
+index e980796..cfa96e7 100644
+--- a/lib/features/auth/data/models/user_model.dart
++++ b/lib/features/auth/data/models/user_model.dart
+@@ -9,6 +9,7 @@ class UserModel extends User {
+     required super.displayName,
+     required super.role,
+     super.schoolId,
++    super.schoolName,
+     super.classNum,
+     super.studentNum,
+     super.gender,
+@@ -25,6 +26,7 @@ class UserModel extends User {
+       displayName: json['displayName'] as String? ?? '',
+       role: role,
+       schoolId: json['schoolId'] as String?,
++      schoolName: json['schoolName'] as String?,
+       classNum: json['classNum'] as String?,
+       studentNum: json['studentNum'] as String?,
+       gender: json['gender'] as String?,
+@@ -39,6 +41,7 @@ class UserModel extends User {
+       'displayName': displayName,
+       'role': role == UserRole.teacher ? 'teacher' : 'student',
+       'schoolId': schoolId,
++      'schoolName': schoolName,
+       'classNum': classNum,
+       'studentNum': studentNum,
+       'gender': gender,
+@@ -60,6 +63,7 @@ class UserModel extends User {
+       role: role,
+       displayName: userData['displayName'] as String? ?? '',
+       schoolId: userData['schoolId'] as String?,
++      schoolName: userData['schoolName'] as String?,
+       classNum: userData['classNum'] as String?,
+       studentNum: userData['studentNum'] as String?,
+       gender: userData['gender'] as String?,
+@@ -74,6 +78,7 @@ class UserModel extends User {
+       displayName: user.displayName,
+       role: user.role,
+       schoolId: user.schoolId,
++      schoolName: user.schoolName,
+       classNum: user.classNum,
+       studentNum: user.studentNum,
+       gender: user.gender,
+diff --git a/lib/features/auth/data/repositories/auth_repository_impl.dart b/lib/features/auth/data/repositories/auth_repository_impl.dart
+index 05d33da..873e465 100644
+--- a/lib/features/auth/data/repositories/auth_repository_impl.dart
++++ b/lib/features/auth/data/repositories/auth_repository_impl.dart
+@@ -84,13 +84,13 @@ class AuthRepositoryImpl implements AuthRepository {
+ 
+   @override
+   Future<Either<Failure, User>> signInStudent({
+-    required String schoolId,
++    required String schoolName,
+     required String studentId,
+     required String password,
+   }) async {
+     try {
+       final user = await _remoteDataSource.signInStudent(
+-        schoolId: schoolId,
++        schoolName: schoolName,
+         studentId: studentId,
+         password: password,
+       );
+diff --git a/lib/features/auth/domain/entities/user.dart b/lib/features/auth/domain/entities/user.dart
+index 14aba84..5f5772a 100644
+--- a/lib/features/auth/domain/entities/user.dart
++++ b/lib/features/auth/domain/entities/user.dart
+@@ -3,11 +3,11 @@ enum UserRole {
+   admin('관리자'),
+   teacher('교사'),
+   student('학생');
+-  
++
+   final String koreanName;
+-  
++
+   const UserRole(this.koreanName);
+-  
++
+   @override
+   String toString() => koreanName;
+ }
+@@ -18,37 +18,43 @@ enum UserRole {
+ class User {
+   /// 사용자 ID
+   final String id;
+-  
++
+   /// 이메일
+   final String? email;
+-  
++
+   /// 이름
+   final String displayName;
+-  
++
+   /// 사용자 역할
+   final UserRole role;
+-  
++
+   /// 학교 ID (선택)
+   final String? schoolId;
+-  
++
++  /// 학교명 (선택)
++  final String? schoolName;
++
++  /// 학년 (선택)
++  final String? grade;
++
+   /// 학반 (선택)
+   final String? classNum;
+-  
++
+   /// 학생 번호 (학생인 경우)
+   final String? studentNum;
+-  
++
+   /// 학번 (학생인 경우, classNum + studentNum)
+   final String? studentId;
+-  
++
+   /// 성별 (학생인 경우)
+   final String? gender;
+-  
++
+   /// 핸드폰 번호 (교사인 경우)
+   final String? phoneNumber;
+-  
++
+   /// 계정 승인 상태 (교사인 경우)
+   final bool isApproved;
+-  
++
+   /// 생성자
+   User({
+     required this.id,
+@@ -56,6 +62,8 @@ class User {
+     required this.displayName,
+     required this.role,
+     this.schoolId,
++    this.schoolName,
++    this.grade,
+     this.classNum,
+     this.studentNum,
+     this.studentId,
+@@ -63,7 +71,7 @@ class User {
+     this.phoneNumber,
+     this.isApproved = false,
+   });
+-  
++
+   /// 익명 사용자 여부
+   bool get isAnonymous => id.isEmpty;
+ 
+@@ -72,28 +80,25 @@ class User {
+ 
+   /// 학생 여부
+   bool get isStudent => role == UserRole.student;
+-  
++
+   /// 관리자 여부
+   bool get isAdmin => role == UserRole.admin;
+-  
++
+   @override
+   String toString() {
+     return 'User{id: $id, email: $email, displayName: $displayName, role: $role}';
+   }
+-  
++
+   @override
+   bool operator ==(Object other) =>
+-    identical(this, other) ||
+-    (other is User &&
+-     id == other.id &&
+-     email == other.email &&
+-     displayName == other.displayName &&
+-     role == other.role);
+-  
++      identical(this, other) ||
++      (other is User &&
++          id == other.id &&
++          email == other.email &&
++          displayName == other.displayName &&
++          role == other.role);
++
+   @override
+   int get hashCode =>
+-    id.hashCode ^
+-    email.hashCode ^
+-    displayName.hashCode ^
+-    role.hashCode;
++      id.hashCode ^ email.hashCode ^ displayName.hashCode ^ role.hashCode;
+ }
+diff --git a/lib/features/auth/domain/repositories/auth_repository.dart b/lib/features/auth/domain/repositories/auth_repository.dart
+index a628d3c..e408a03 100644
+--- a/lib/features/auth/domain/repositories/auth_repository.dart
++++ b/lib/features/auth/domain/repositories/auth_repository.dart
+@@ -34,7 +34,7 @@ abstract class AuthRepository {
+ 
+   /// 학번/비밀번호로 학생 로그인
+   Future<Either<Failure, User>> signInStudent({
+-    required String schoolId,
++    required String schoolName,
+     required String studentId,
+     required String password,
+   });
+diff --git a/lib/features/auth/domain/usecases/login_with_email_password.dart b/lib/features/auth/domain/usecases/login_with_email_password.dart
+index 5617b93..e69de29 100644
+--- a/lib/features/auth/domain/usecases/login_with_email_password.dart
++++ b/lib/features/auth/domain/usecases/login_with_email_password.dart
+@@ -1,36 +0,0 @@
+-import 'package:dartz/dartz.dart';
+-import 'package:equatable/equatable.dart';
+-
+-import '../../../../core/error/failures.dart';
+-import '../../../../core/usecases/usecase.dart';
+-import '../entities/user.dart';
+-import '../repositories/auth_repository.dart';
+-
+-/// 이메일과 비밀번호로 로그인하는 유스케이스
+-class LoginWithEmailPassword implements UseCase<User, LoginParams> {
+-  final AuthRepository repository;
+-
+-  LoginWithEmailPassword(this.repository);
+-
+-  @override
+-  Future<Either<Failure, User>> call(LoginParams params) async {
+-    return await repository.signInWithEmailPassword(
+-      email: params.email,
+-      password: params.password,
+-    );
+-  }
+-}
+-
+-/// 로그인 파라미터
+-class LoginParams extends Equatable {
+-  final String email;
+-  final String password;
+-
+-  const LoginParams({
+-    required this.email,
+-    required this.password,
+-  });
+-
+-  @override
+-  List<Object> get props => [email, password];
+-}
+diff --git a/lib/features/auth/domain/usecases/sign_in_student.dart b/lib/features/auth/domain/usecases/sign_in_student.dart
+index a1aa2f2..596d929 100644
+--- a/lib/features/auth/domain/usecases/sign_in_student.dart
++++ b/lib/features/auth/domain/usecases/sign_in_student.dart
+@@ -8,18 +8,18 @@ import '../repositories/auth_repository.dart';
+ 
+ /// 학생 로그인을 위한 파라미터
+ class SignInStudentParams extends Equatable {
+-  final String schoolId;
++  final String schoolName;
+   final String studentId;
+   final String password;
+ 
+   const SignInStudentParams({
+-    required this.schoolId,
++    required this.schoolName,
+     required this.studentId,
+     required this.password,
+   });
+ 
+   @override
+-  List<Object?> get props => [schoolId, studentId, password];
++  List<Object?> get props => [schoolName, studentId, password];
+ }
+ 
+ /// 학생 로그인 유스케이스
+@@ -31,7 +31,7 @@ class SignInStudent implements UseCase<User, SignInStudentParams> {
+   @override
+   Future<Either<Failure, User>> call(SignInStudentParams params) {
+     return _repository.signInStudent(
+-      schoolId: params.schoolId,
++      schoolName: params.schoolName,
+       studentId: params.studentId,
+       password: params.password,
+     );
+diff --git a/lib/features/auth/presentation/cubit/auth_cubit.dart b/lib/features/auth/presentation/cubit/auth_cubit.dart
+index 08b211f..34edcdf 100644
+--- a/lib/features/auth/presentation/cubit/auth_cubit.dart
++++ b/lib/features/auth/presentation/cubit/auth_cubit.dart
+@@ -185,7 +185,7 @@ class AuthCubit extends Cubit<AuthState> {
+ 
+   /// 학생 로그인
+   Future<void> signInStudent({
+-    required String schoolId,
++    required String schoolName,
+     required String studentId,
+     required String password,
+   }) async {
+@@ -193,7 +193,7 @@ class AuthCubit extends Cubit<AuthState> {
+ 
+     final result = await _signInStudent(
+       SignInStudentParams(
+-        schoolId: schoolId,
++        schoolName: schoolName,
+         studentId: studentId,
+         password: password,
+       ),
+diff --git a/lib/features/auth/presentation/pages/login_page.dart b/lib/features/auth/presentation/pages/login_page.dart
+index b53c15b..2859e62 100644
+--- a/lib/features/auth/presentation/pages/login_page.dart
++++ b/lib/features/auth/presentation/pages/login_page.dart
+@@ -30,14 +30,14 @@ class _LoginPageState extends State<LoginPage> {
+   // 컨트롤러
+   final _emailController = TextEditingController();
+   final _passwordController = TextEditingController();
+-  final _schoolIdController = TextEditingController();
++  final _schoolNameController = TextEditingController();
+   final _studentIdController = TextEditingController();
+ 
+   @override
+   void dispose() {
+     _emailController.dispose();
+     _passwordController.dispose();
+-    _schoolIdController.dispose();
++    _schoolNameController.dispose();
+     _studentIdController.dispose();
+     super.dispose();
+   }
+@@ -179,13 +179,13 @@ class _LoginPageState extends State<LoginPage> {
+     return Column(
+       children: [
+         AppTextField(
+-          label: '학교 코드',
+-          hintText: '학교 코드를 입력하세요',
+-          controller: _schoolIdController,
++          label: '학교명',
++          hintText: '학교 이름을 입력하세요',
++          controller: _schoolNameController,
+           prefixIcon: const Icon(Icons.school),
+           validator: (value) {
+             if (value == null || value.isEmpty) {
+-              return '학교 코드를 입력해주세요';
++              return '학교명을 입력해주세요';
+             }
+             return null;
+           },
+@@ -238,7 +238,7 @@ class _LoginPageState extends State<LoginPage> {
+   void _onStudentLogin() {
+     if (_formKey.currentState!.validate()) {
+       context.read<AuthCubit>().signInStudent(
+-        schoolId: _schoolIdController.text.trim(),
++        schoolName: _schoolNameController.text.trim(),
+         studentId: _studentIdController.text.trim(),
+         password: _passwordController.text,
+       );
+diff --git a/project_docs/cloud_functions_deploy.md b/project_docs/cloud_functions_deploy.md
+new file mode 100644
+index 0000000..8d1b122
+--- /dev/null
++++ b/project_docs/cloud_functions_deploy.md
+@@ -0,0 +1,91 @@
++# Cloud Functions 배포 가이드
++
++이 문서는 온라인 팝스(PAPS) 교육 플랫폼에서 사용하는 Firebase Cloud Functions의 배포 방법을 설명합니다.
++
++## 배포 전 준비사항
++
++1. Firebase CLI가 설치되어 있는지 확인합니다.
++   ```bash
++   firebase --version
++   ```
++   
++   만약 설치되어 있지 않다면 다음 명령어로 설치합니다:
++   ```bash
++   npm install -g firebase-tools
++   ```
++
++2. Firebase에 로그인합니다.
++   ```bash
++   firebase login
++   ```
++
++3. 프로젝트가 올바르게 설정되어 있는지 확인합니다.
++   ```bash
++   firebase projects:list
++   ```
++   
++   현재 작업 중인 프로젝트가 목록에 있는지 확인하세요.
++
++## Cloud Functions 배포
++
++1. Firebase Functions 디렉토리로 이동합니다.
++   ```bash
++   cd /Users/smartchoi/Desktop/jumpto/firebase/functions
++   ```
++
++2. 의존성 패키지를 설치합니다.
++   ```bash
++   npm install
++   ```
++
++3. 작성한 Cloud Functions를 배포합니다.
++   ```bash
++   firebase deploy --only functions
++   ```
++   
++   특정 함수만 배포하려면 다음과 같이 함수명을 지정할 수 있습니다:
++   ```bash
++   firebase deploy --only functions:createStudentAuthAccount,functions:resetStudentPassword,functions:updateStudentGender,functions:studentLogin,functions:createBulkStudentAccounts
++   ```
++
++4. 배포 완료 후 Firebase 콘솔에서 함수가 정상적으로 작동하는지 확인합니다.
++   - Firebase 콘솔 > Functions 메뉴에서 배포된 함수 목록 확인
++   - 로그를 확인하여 오류가 있는지 검사
++
++## 배포 후 로컬 App 테스트
++
++Cloud Functions가 성공적으로 배포된 후에는 다음 단계를 통해 앱에서 테스트할 수 있습니다:
++
++1. Flutter 앱 실행
++   ```bash
++   cd /Users/smartchoi/Desktop/jumpto
++   flutter run -d chrome
++   ```
++
++2. 학생 로그인 테스트
++   - 학교명과 학번으로 로그인 시도
++   - 성공적으로 로그인되는지 확인
++
++3. 교사 계정으로 학생 계정 일괄 생성 테스트
++   - 교사 계정으로 로그인
++   - 학생 관리 화면에서 학생 명단 업로드
++   - Cloud Functions 로그에서 계정 생성 성공 여부 확인
++
++## 문제 해결
++
++로그 확인:
++```bash
++firebase functions:log
++```
++
++이 명령어를 통해 함수 실행 중 발생하는 오류와 디버그 메시지를 확인할 수 있습니다.
++
++## 추가 주의사항
++
++1. Cloud Functions는 Firebase의 유료 요금제에 따라 비용이 발생할 수 있습니다. 사용량을 모니터링하세요.
++
++2. 학생 비밀번호는 항상 안전하게 관리해야 합니다. 데이터베이스에 평문으로 저장하지 마세요.
++
++3. 실제 운영 환경에서는 `.env` 파일이나 Firebase 환경 변수를 사용하여 민감한 정보를 관리하는 것이 좋습니다.
++
++4. 에러 처리와 로깅을 충분히 하여 문제 발생 시 빠르게 대응할 수 있도록 하세요.
+\ No newline at end of file
+diff --git a/project_docs/cloud_functions_test_cases.md b/project_docs/cloud_functions_test_cases.md
+new file mode 100644
+index 0000000..5669e6a
+--- /dev/null
++++ b/project_docs/cloud_functions_test_cases.md
+@@ -0,0 +1,118 @@
++# Cloud Functions 테스트 케이스
++
++이 문서는 온라인 팝스(PAPS) 교육 플랫폼에서 사용하는 Firebase Cloud Functions의 테스트 케이스를 설명합니다.
++
++## 1. 학생 로그인 테스트 (studentLogin)
++
++### 테스트 시나리오:
++
++1. **정상 로그인**
++   - 학교명: '가락고등학교'
++   - 학번: '2530101' (25학년도 3학년 1반 1번)
++   - 비밀번호: 'student123'
++   - 예상 결과: 로그인 성공 및 학생 정보 반환
++
++2. **존재하지 않는 학교**
++   - 학교명: '없는고등학교'
++   - 학번: '2530101'
++   - 비밀번호: 'student123'
++   - 예상 결과: "해당 학교 정보를 찾을 수 없습니다" 오류
++
++3. **잘못된 학번**
++   - 학교명: '가락고등학교'
++   - 학번: '2590101' (존재하지 않는 학번)
++   - 비밀번호: 'student123'
++   - 예상 결과: "학교명, 학번 또는 비밀번호가 일치하지 않습니다" 오류
++
++4. **잘못된 비밀번호**
++   - 학교명: '가락고등학교'
++   - 학번: '2530101'
++   - 비밀번호: 'wrongpassword'
++   - 예상 결과: "학교명, 학번 또는 비밀번호가 일치하지 않습니다" 오류
++
++5. **로그인 정보 저장 기능**
++   - 학교명과 학번을 저장하는 옵션 선택
++   - 로그아웃 후 다시 로그인 화면 접속
++   - 예상 결과: 저장된 학교명과 학번이 자동으로 입력되어 있음
++
++## 2. 학생 계정 일괄 생성 테스트 (createBulkStudentAccounts)
++
++### 테스트 시나리오:
++
++1. **정상 일괄 생성**
++   - 교사 계정으로 로그인
++   - 유효한 학생 명단 CSV 파일 업로드
++   - 예상 결과: 학생 계정 일괄 생성 성공 및 성공/실패 개수 반환
++
++2. **중복된 학생 정보 처리**
++   - 이미 존재하는 학생 정보가 포함된 CSV 파일 업로드
++   - 예상 결과: 중복된 학생 정보는 실패 처리되고, 나머지는 성공
++
++3. **대용량 데이터 처리**
++   - 100명 이상의 학생 정보가 포함된 CSV 파일 업로드
++   - 예상 결과: 모든 학생 계정이 성공적으로 생성됨
++
++4. **잘못된 형식의 데이터 처리**
++   - 필수 필드가 누락된 CSV 파일 업로드
++   - 예상 결과: 해당 레코드는 실패 처리되고 오류 메시지 반환
++
++## 3. 학생 비밀번호 초기화 테스트 (resetStudentPassword)
++
++### 테스트 시나리오:
++
++1. **정상 비밀번호 초기화**
++   - 교사 계정으로 로그인
++   - 자신의 학급 학생 선택
++   - 비밀번호 초기화 버튼 클릭
++   - 새 비밀번호 입력
++   - 예상 결과: 비밀번호 초기화 성공 메시지
++
++2. **권한 없는 학생 비밀번호 초기화 시도**
++   - 교사 계정으로 로그인
++   - 다른 교사의 학급 학생 선택 (권한 없음)
++   - 비밀번호 초기화 버튼 클릭
++   - 예상 결과: "자신의 학급 학생만 비밀번호를 초기화할 수 있습니다" 오류
++
++3. **인증되지 않은 사용자의 비밀번호 초기화 시도**
++   - 로그아웃 상태에서 API 직접 호출
++   - 예상 결과: "인증이 필요합니다" 오류
++
++## 4. 학생 성별 업데이트 테스트 (updateStudentGender)
++
++### 테스트 시나리오:
++
++1. **정상 성별 업데이트**
++   - 학생 계정으로 로그인
++   - 마이페이지에서 성별 선택 ('남' 또는 '여')
++   - 저장 버튼 클릭
++   - 예상 결과: 성별 정보 업데이트 성공 메시지
++
++2. **인증되지 않은 사용자의 성별 업데이트 시도**
++   - 로그아웃 상태에서 API 직접 호출
++   - 예상 결과: "인증이 필요합니다" 오류
++
++3. **교사 계정의 성별 업데이트 시도**
++   - 교사 계정으로 로그인
++   - API 직접 호출
++   - 예상 결과: "학생만 자신의 성별을 업데이트할 수 있습니다" 오류
++
++4. **잘못된 성별 값 업데이트 시도**
++   - 학생 계정으로 로그인
++   - '남' 또는 '여'가 아닌 다른 값으로 API 직접 호출
++   - 예상 결과: "유효한 성별 정보가 필요합니다" 오류
++
++## 5. 학생 인증 계정 자동 생성 테스트 (createStudentAuthAccount)
++
++### 테스트 시나리오:
++
++1. **정상 인증 계정 생성**
++   - Firestore에 새 학생 문서 생성 (이메일과 비밀번호 포함)
++   - 예상 결과: Firebase Authentication에 계정 생성 및 authUid 필드 추가
++
++2. **중복된 이메일로 인증 계정 생성 시도**
++   - 이미 존재하는 이메일로 Firestore에 새 학생 문서 생성
++   - 예상 결과: 오류 로그 및 인증 계정 생성 실패
++
++3. **필수 필드 누락 시 처리**
++   - 이메일 또는 비밀번호 없이 Firestore에 새 학생 문서 생성
++   - 예상 결과: 오류 로그 및 인증 계정 생성 중단
+\ No newline at end of file
+diff --git a/project_docs/project_plan.md b/project_docs/project_plan.md
+index 84014a8..097763d 100644
+--- a/project_docs/project_plan.md
++++ b/project_docs/project_plan.md
+@@ -211,15 +211,37 @@
+   - SchoolCubit 및 관련 컴포넌트 등록
+   - MultiBlocProvider에 SchoolCubit 추가
+ 
++### 완료된 작업 (학생 인증 시스템)
++
++- Cloud Functions 구현 완료
++  - createStudentAuthAccount: 학생 Firestore 문서 생성 시 Firebase Authentication 계정 자동 생성
++  - resetStudentPassword: 교사가 학생 비밀번호를 초기화하기 위한 함수
++  - updateStudentGender: 학생이 마이페이지에서 성별 정보 업데이트를 위한 함수
++  - studentLogin: 학생이 학교명과 학번으로 로그인할 수 있는 함수
++  - createBulkStudentAccounts: 교사가 학생 명단을 일괄 업로드할 때 호출되는 함수
++- 클라이언트 측 Cloud Functions 연동 구현
++  - CloudFunctionsService 클래스 확장
++  - 학생 로그인, 비밀번호 초기화, 성별 업데이트 기능 구현
++- 클린 아키텍처에 맞는 연동 구현
++  - AuthRemoteDataSource에 Cloud Functions 연동
++  - SignInStudent 유스케이스에 학교명 기반 로그인 적용
++  - 학생 로그인 UI 수정
++  
+ ### 다음 예정 작업
+ 
+ - Cloud Functions 배포 및 테스트
+   - Firebase CLI를 이용한 함수 배포
+   - 학생 계정 자동 생성 및 비밀번호 초기화 테스트
+   - 성별 업데이트 기능 테스트
++  - 학생 로그인 기능 테스트
+ - 학번(studentId)과 학생 번호(studentNum) 구분 확실한 적용
+   - 전체 프로젝트에서 일관된 용어 사용
+   - UI/UX에서 학생에게 표시되는 학번/학생번호 용어 통일
++- 학교 관련 필드 통일 완료
++  - schoolId 필드를 학교 코드 뒤 4자리 숫자로 통일
++  - schoolName 필드를 학교명으로 통일
++  - 학생 인증용 이메일 형식 변경: "(연도 두자리)(학번)@school(학교코드 뒤 4자리).com"
++    - 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com
+ - 교사 대시보드에 학생 비밀번호 초기화 기능 추가
+   - 학생 관리 화면에 비밀번호 초기화 버튼 추가
+   - 초기화 확인 모달 구현
+@@ -248,7 +270,14 @@
+ 
+ ### 새로 추가된 내용
+ 
+-- 학생 로그인 유스케이스(SignInStudent) 추가
++- 로그인/인증 관련 코드 리팩토링
++  - 중복된 LoginWithEmailPassword 유스케이스 제거 (사용하지 않는 파일 정리)
++  - 학생 이메일 형식 통일: "(연도 두자리)(학번)@school(학교코드 뒤 4자리).com"
++    - 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com
++  - User 및 UserModel 클래스에 schoolName 필드 추가
++  - AuthRemoteDataSource 클래스 이메일 생성 로직 수정
++  - 학생 여부에 따른 적절한 로그인 처리 개선
++- 학생 로그인 유스케이스(SignInStudent) 구현
+ - 관리자 관련 기능 구현
+   - 관리자 역할 추가 (UserRole enum 수정)
+   - 관리자 도메인 모델 구현 (AdminRepository 등)

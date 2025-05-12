@@ -227,6 +227,22 @@
   - SignInStudent 유스케이스에 학교명 기반 로그인 적용
   - 학생 로그인 UI 수정
   
+### 최근 완료된 작업 (인증 관련 버그 수정)
+
+- CloudFunctionsService 클래스 구조 수정
+  - 클래스 외부에 정의된 메서드들을 클래스 내부로 이동시켜 올바른 객체지향 설계 적용
+  - studentLogin, createBulkStudentAccounts, updateStudentGender 메서드 위치 수정
+- 의존성 주입(DI) 이슈 해결
+  - 누락된 CloudFunctionsService 의존성 경로 수정
+  - 잘못된 import 경로 수정 (services → cloud_functions_service.dart)
+  - 의존성 주입 오류로 인한 회색 화면 문제 해결
+- 삭제된 유스케이스 복원
+  - LoginWithEmailPassword 유스케이스 파일 복원 및 코드 추가
+  - 중복 유스케이스 호환성 유지 (레거시 코드 호환성)
+- StudentRemoteDataSource 클래스 수정
+  - CloudFunctionsService 올바른 주입 및 사용
+  - import 경로 수정
+
 ### 다음 예정 작업
 
 - Cloud Functions 배포 및 테스트

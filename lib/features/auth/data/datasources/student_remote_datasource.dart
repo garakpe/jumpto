@@ -5,7 +5,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import '../../../../core/error/exceptions.dart';
 import '../models/student_model.dart';
 import 'package:flutter/foundation.dart';
-import '../../../../core/firebase/services/cloud_functions_service.dart';
+import '../../../../core/firebase/cloud_functions_service.dart';
 
 /// 학생 원격 데이터 소스 인터페이스
 abstract class StudentRemoteDataSource {
