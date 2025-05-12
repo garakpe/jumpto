@@ -69,7 +69,7 @@ Future<void> init() async {
   // External
   sl.registerLazySingleton<FirebaseFirestore>(() => FirebaseFirestore.instance);
   sl.registerLazySingleton<FirebaseAuth>(() => FirebaseAuth.instance);
-  sl.registerLazySingleton<FirebaseFunctions>(() => FirebaseFunctions.instance);
+  sl.registerLazySingleton<FirebaseFunctions>(() => FirebaseFunctions.instanceFor(region: 'asia-northeast3'));
   sl.registerLazySingleton<Connectivity>(() => Connectivity());
   sl.registerLazySingleton<CloudFunctionsService>(() => CloudFunctionsService(functions: sl()));
   

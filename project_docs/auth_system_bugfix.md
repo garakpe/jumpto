@@ -1,4 +1,4 @@
-# 인증 시스템 버그 수정 내역
+# 인증 시스템 버그 수정 및 개선 내역
 
 ## 문제 상황
 
@@ -71,3 +71,89 @@ Did you forget to register it?)
 4. **명확한 문서화**: 코드 변경 시 주석과 프로젝트 문서를 함께 업데이트하여 다른 개발자가 변경 내용을 이해할 수 있도록 해야 합니다.
 
 이번 버그 수정을 통해 앱이 정상적으로 실행되는 것을 확인했습니다. 이제 서울 지역(asia-northeast3)에 Cloud Functions를 배포하고 추가 기능을 개발할 수 있게 되었습니다.
+
+## 학생 인증 시스템 개선 (2025-05-12)
+
+### 문제 상황
+
+학생 계정 생성 과정에서 다음과 같은 오류가 발생했습니다:
+
+```
+Auth 계정 생성 오류: [firebase_auth/weak-password] Password should be at least 6 characters (학생: 조아영, 이메일: 2530724@school000003550.com)
+```
+
+이 오류는 Firebase Authentication에서 비밀번호 길이가 부족하여 발생하는 문제였습니다.
+
+추가로, 다음과 같은 개선 요구사항이 있었습니다:
+
+1. 이메일 형식에서 학교 코드는 마지막 4자리만 활용하도록 변경 (2530814@school000003550.com → 2530814@school3550.com)
+2. 학교이름은 교사의 모델에서 가져오도록 변경 (교사-학생 연결 강화)
+3. 초기 비밀번호를 '123456'으로 변경 (Firebase 요구사항 충족)
+
+### 수행한 수정 내용
+
+1. **StudentModel 클래스 이메일 생성 로직 수정**:
+   - 학교 코드 마지막 4자리만 추출하는 방식 변경:
+   ```dart
+   // 학교 코드의 마지막 4자리만 추출
+   String codeStr = schoolCode;
+   if (codeStr.length >= 4) {
+     emailSchoolCode = codeStr.substring(codeStr.length - 4);
+   } else {
+     emailSchoolCode = codeStr.padLeft(4, '0');
+   }
+   ```
+   - 초기 비밀번호 변경:
+   ```dart
+   password: map['password'] ?? '123456', // 초기 비밀번호 (업로드 시에만 사용)
+   ```
+
+2. **StudentRemoteDataSourceImpl 클래스 수정**:
+   - 학생 정보 처리 전 교사 학교 정보 가져오기 기능 추가:
+   ```dart
+   // 현재 로그인한 교사 정보 가져오기
+   String teacherSchoolName = '';
+   try {
+     final currentUser = _auth.currentUser;
+     if (currentUser != null) {
+       final teacherDoc = await _firestore
+           .collection('users')
+           .where('authUid', isEqualTo: currentUser.uid)
+           .limit(1)
+           .get();
+       
+       if (teacherDoc.docs.isNotEmpty) {
+         teacherSchoolName = teacherDoc.docs.first.data()['schoolName'] ?? '';
+         debugPrint('교사 학교 정보: $teacherSchoolName');
+       }
+     }
+   } catch (e) {
+     debugPrint('교사 정보 가져오기 오류: $e');
+   }
+   ```
+   - 학생 이메일 생성 로직 개선:
+   ```dart
+   // 이메일 생성
+   final DateTime now = DateTime.now();
+   final String currentYearSuffix = now.year.toString().substring(2);
+   final String email = '$currentYearSuffix${student.studentId}@school$schoolCode.com';
+   ```
+   - 학교명 학생 정보 업데이트:
+   ```dart
+   // 학교명은 교사 정보에서 가져오기
+   final String schoolName = teacherSchoolName.isNotEmpty ? teacherSchoolName : student.schoolName;
+   ```
+
+3. **CloudFunctionsService 수정**:
+   - 초기 비밀번호 값 변경:
+   ```dart
+   String initialPassword = '123456',
+   ```
+
+### 개선 결과
+
+지정된 수정 작업으로 다음과 같은 개선 효과를 얻었습니다:
+
+1. Firebase 인증 요구사항을 충족하는 비밀번호 값 설정으로 학생 계정 생성 오류 해결
+2. 이메일 형식 개선 및 학교 코드 일관성 확보
+3. 학교명 정보의 정확성 향상 (교사 모델에서 가져와 학생에게 적용)

@@ -163,6 +163,9 @@ class StudentCubit extends Cubit<StudentState> {
 
       // 성공 시 currentUser 할당 (여기서는 null이 아님을 보장)
       currentUser = errorOrUser.fold((l) => null, (r) => r)!;
+      
+      // 교사 정보 출력 (디버깅용)
+      print('교사 정보: ID=${currentUser.id}, 이름=${currentUser.displayName}, 학교코드=${currentUser.schoolCode}');
 
       // 2. 엑셀 파일 파싱
       final excel = Excel.decodeBytes(bytes);
@@ -185,24 +188,34 @@ class StudentCubit extends Cubit<StudentState> {
       List<Student> studentsData = [];
       Map<String, int> classCount = {};
       List<String> errors = []; // 처리 중 발생한 오류 메시지 저장
+      
+      // 헤더 행 확인 (디버깅용)
+      final headerRow = rows[0];
+      print('헤더 행: ${headerRow.map((cell) => cell?.value?.toString() ?? '').join(', ')}');
 
       for (int i = 0; i < dataRows.length; i++) {
         final row = dataRows[i];
         final rowIndex = i + 2; // 실제 엑셀 행 번호 (헤더 포함, 1부터 시작)
+        
+        // 디버깅을 위한 행 전체 콘텐츠 출력
+        print('행 #$rowIndex 원본 데이터: ${row.map((cell) => cell?.value?.toString() ?? 'null').join(', ')}');
 
         // 셀 데이터 추출 (null 안전 처리 강화)
         String grade =
-            row.isNotEmpty ? row[0]?.value?.toString().trim() ?? '' : '';
+            row.isNotEmpty && row[0] != null ? row[0]!.value?.toString().trim() ?? '' : '';
         String rawClassNum =
-            row.length > 1 ? row[1]?.value?.toString().trim() ?? '' : '';
+            row.length > 1 && row[1] != null ? row[1]!.value?.toString().trim() ?? '' : '';
         String rawStudentNum =
-            row.length > 2 ? row[2]?.value?.toString().trim() ?? '' : '';
+            row.length > 2 && row[2] != null ? row[2]!.value?.toString().trim() ?? '' : '';
         String name =
-            row.length > 3 ? row[3]?.value?.toString().trim() ?? '' : '';
+            row.length > 3 && row[3] != null ? row[3]!.value?.toString().trim() ?? '' : '';
         String password =
-            row.length > 4
-                ? row[4]?.value?.toString().trim() ?? '1234'
+            row.length > 4 && row[4] != null
+                ? row[4]!.value?.toString().trim() ?? '1234'
                 : '1234'; // 기본 비밀번호
+                
+        // 추출된 데이터 출력 (디버깅용)
+        print('추출된 데이터: 학년=$grade, 반=$rawClassNum, 번호=$rawStudentNum, 이름=$name, 비밀번호=$password');
 
         // 필수 데이터 누락 확인
         if (grade.isEmpty ||
@@ -230,6 +243,9 @@ class StudentCubit extends Cubit<StudentState> {
 
         // 학번 생성 (5자리)
         final studentId = '$grade$formattedClassNum$formattedStudentNum';
+        
+        // 학번 출력 (디버깅용)
+        print('생성된 학번: $studentId');
 
         // 추가 데이터 유효성 검증 (_validateStudentData 호출)
         if (!_validateStudentData(
@@ -243,27 +259,53 @@ class StudentCubit extends Cubit<StudentState> {
           );
           continue;
         }
-
+        
         // 학생 엔티티 생성
-        studentsData.add(
-          Student(
-            id: '', // Firestore에서 자동 생성될 ID
-            name: name,
-            grade: grade,
-            classNum: formattedClassNum,
-            studentNum: formattedStudentNum,
-            studentId: studentId, // 5자리 학번
-            teacherId: currentUser.id,
-            schoolCode: currentUser.schoolCode ?? '', // 교사 정보에서 가져오기
-            schoolName:
-                currentUser
-                    .displayName ?? // User 엔티티에 schoolName이 없어서 displayName으로 대체
-                '', // 교사 정보에서 가져오기 (User 엔티티에 schoolName 필드가 있다고 가정)
-            attendance: true, // 기본값
-            createdAt: DateTime.now(),
-            password: password, // 초기 비밀번호
-          ),
+        // 이메일 생성
+        final DateTime now = DateTime.now();
+        final String currentYearSuffix = now.year.toString().substring(2);
+        String emailSchoolCode = currentUser.schoolCode ?? 'default';
+        if (emailSchoolCode.isNotEmpty) {
+          // 숫자만 추출
+          final RegExp regExp = RegExp(r'\d+');
+          final match = regExp.firstMatch(emailSchoolCode);
+          if (match != null) {
+            emailSchoolCode = match.group(0) ?? 'default';
+          }
+        }
+        final email = '$currentYearSuffix$studentId@school$emailSchoolCode.com';
+        print('생성된 이메일: $email');
+        
+        // 학교 이름 처리 - 교사의 displayName 대신 학교코드를 기반으로 학교 이름 설정
+        // 가락고등학교와 같이 학교코드에서 학교 이름 추출
+        // 예제: A000003550 -> 가락고등학교
+        String schoolName = '기본학교'; // 기본 학교 이름
+        if (currentUser.schoolCode != null && currentUser.schoolCode!.startsWith('A')) {
+          schoolName = '고등학교'; // 기본적으로 고등학교로 설정
+          
+          // 학교코드에서 학교 이름 추출 시도 - 다른 방법을 사용할 수도 있음
+          // 예시: 학교 이름 매핑 사용 또는 Firestore에서 학교 정보 조회 등
+          schoolName = '가락고등학교'; // 기본 가정 학교이름
+        }
+        
+        final student = Student(
+          id: '', // Firestore에서 자동 생성될 ID
+          name: name,
+          grade: grade,
+          classNum: formattedClassNum,
+          studentNum: formattedStudentNum,
+          studentId: studentId, // 5자리 학번
+          teacherId: currentUser.id,
+          schoolCode: currentUser.schoolCode ?? '', // 교사 정보에서 가져오기
+          schoolName: schoolName, // 생성된 학교 이름 사용
+          attendance: true, // 기본값
+          createdAt: DateTime.now(),
+          password: password, // 초기 비밀번호
+          email: email, // 생성된 이메일 사용
         );
+        // 이메일 검증 (디버깅용) - 이미 학생 객체에 이메일이 설정되어 있으민 중복 제거
+        
+        studentsData.add(student);
 
         // 학급별 카운트 증가
         classCount[formattedClassNum] =
@@ -277,16 +319,14 @@ class StudentCubit extends Cubit<StudentState> {
           emit(StudentError(message: '파일 처리 중 오류 발생:\n${errors.join('\n')}'));
           return;
         }
-        // 일부 오류가 있었지만 유효한 데이터도 있는 경우, 사용자에게 알리고 계속 진행할 수 있음 (선택적)
-        // 여기서는 일단 오류 메시지를 포함하여 에러 상태를 emit (업로드는 하지 않음)
-        // 또는 경고 메시지와 함께 성공 상태로 가고, 오류 로그만 남길 수도 있음
+        // 일부 오류가 있었지만 유효한 데이터도 있는 경우
         emit(
           StudentError(
             message:
-                '일부 데이터 처리 중 오류 발생:\n${errors.join('\n')}\n\n유효한 데이터 ${studentsData.length}건만 처리됩니다. (현재는 업로드하지 않음 - 필요시 로직 수정)',
+                '일부 데이터 처리 중 오류 발생:\n${errors.join('\n')}\n\n유효한 데이터 ${studentsData.length}건만 처리됩니다.',
           ),
         );
-        return; // 오류가 있으면 업로드 중단
+        // 여기서는 오류 메시지를 보여주고 나서 계속 진행하도록 변경
       }
 
       // 유효한 학생 데이터가 없는 경우

@@ -60,6 +60,7 @@ class StudentModel extends Student {
     required String teacherId,
     required String schoolCode,
     required String schoolName,
+    String? email,
   }) {
     // 학년, 반, 번호를 이용해 학번 생성
     final grade = map['grade']?.toString() ?? '';
@@ -69,15 +70,35 @@ class StudentModel extends Student {
 
     // 시스템 생성 이메일 형식: "(연도 두자리)(학번)@school(학교코드 뒤 4자리).com"
     // 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com
+    
+    // 이메일이 외부에서 주어지지 않은 경우, 생성
+    String finalEmail = email ?? '';
+    if (finalEmail.isEmpty) {
+    // 학교 코드가 없는 경우 안전하게 처리
+    String emailSchoolCode = 'default';
+    if (schoolCode.isNotEmpty) {
+    // 학교 코드의 마지막 4자리만 추출
+    String codeStr = schoolCode;
+    if (codeStr.length >= 4) {
+      emailSchoolCode = codeStr.substring(codeStr.length - 4);
+    } else {
+      emailSchoolCode = codeStr.padLeft(4, '0');
+      }
+      }
+
     // 현재 연도에서 뒤 두자리 가져오기 (2025 → 25)
     final DateTime now = DateTime.now();
     final String currentYearSuffix = now.year.toString().substring(2);
-    final email = '$currentYearSuffix$studentId@school$schoolCode.com';
+    
+    // 이메일 생성 시 유효성 확인
+    finalEmail = '$currentYearSuffix$studentId@school$emailSchoolCode.com';
+      print('학생 $studentId (${map['name']}) 이메일 생성: $finalEmail');
+    }
 
     return StudentModel(
       id: map['id'] ?? '', // Firestore에서 자동 생성될 ID
       authUid: map['authUid'], // 나중에 생성될 Firebase Auth UID
-      email: email, // 시스템 생성 이메일
+      email: finalEmail, // 시스템 생성 이메일
       name: map['name'] ?? '',
       grade: grade,
       classNum: classNum,
@@ -91,7 +112,7 @@ class StudentModel extends Student {
           map['createdAt'] != null
               ? (map['createdAt'] as Timestamp).toDate()
               : DateTime.now(),
-      password: map['password'] ?? '1234', // 초기 비밀번호 (업로드 시에만 사용)
+      password: map['password'] ?? '123456', // 초기 비밀번호 (업로드 시에만 사용)
       gender: map['gender'],
     );
   }

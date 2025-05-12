@@ -24,6 +24,6 @@ cp assets/data/paps_standards.json build/web/
 cp assets/school_code/*.json build/web/assets/school_code/
 
 # Firebase 배포
-firebase deploy
+firebase deploy --only hosting
 
 echo "빌드 및 배포 완료. 웹사이트에서 확인해보세요."

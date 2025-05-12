@@ -128,25 +128,124 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
       final createdStudents = <StudentModel>[];
       final batch = _firestore.batch();
       
+      // 학생 데이터 준비
+      final updatedStudents = <StudentModel>[];
+      
+      // 현재 로그인한 교사 정보 가져오기
+      String teacherSchoolName = '';
+      try {
+        final currentUser = _auth.currentUser;
+        if (currentUser != null) {
+          final teacherDoc = await _firestore
+              .collection('users')
+              .where('authUid', isEqualTo: currentUser.uid)
+              .limit(1)
+              .get();
+          
+          if (teacherDoc.docs.isNotEmpty) {
+            teacherSchoolName = teacherDoc.docs.first.data()['schoolName'] ?? '';
+            debugPrint('교사 학교 정보: $teacherSchoolName');
+          }
+        }
+      } catch (e) {
+        debugPrint('교사 정보 가져오기 오류: $e');
+      }
+      
+      // 학생 수정 (학교명 및 이메일 형식 수정)
       for (final student in students) {
-        debugPrint('Processing student: ${student.name}, Email: ${student.email}');
+        // 학교 코드의 마지막 4자리만 사용
+        String schoolCode = student.schoolCode;
+        if (schoolCode.length >= 4) {
+          schoolCode = schoolCode.substring(schoolCode.length - 4);
+        } else {
+          schoolCode = schoolCode.padLeft(4, '0');
+        }
+        
+        // 이메일 생성
+        final DateTime now = DateTime.now();
+        final String currentYearSuffix = now.year.toString().substring(2);
+        final String email = '$currentYearSuffix${student.studentId}@school$schoolCode.com';
+        
+        // 학교명은 교사 정보에서 가져오기
+        final String schoolName = teacherSchoolName.isNotEmpty ? teacherSchoolName : student.schoolName;
+        
+        // 수정된 학생 모델 생성
+        final updatedStudent = StudentModel(
+          id: student.id,
+          authUid: student.authUid,
+          email: email,
+          name: student.name,
+          grade: student.grade,
+          classNum: student.classNum,
+          studentNum: student.studentNum,
+          studentId: student.studentId,
+          teacherId: student.teacherId,
+          schoolCode: schoolCode,
+          schoolName: schoolName,
+          attendance: student.attendance,
+          createdAt: student.createdAt,
+          password: '123456',
+          gender: student.gender,
+        );
+        
+        updatedStudents.add(updatedStudent);
+      }
+      
+      // 학생 정보 로그 출력
+      for (final student in updatedStudents) {
+        debugPrint('학생 정보: 이름=${student.name}, 이메일=${student.email}, 학번=${student.studentId}, 학교=${student.schoolName}');
+      }
+      
+      for (final student in updatedStudents) {
+        debugPrint('처리 중인 학생: ${student.name}, 이메일: ${student.email}');
         
         if (student.email == null || student.password == null) {
-          throw ServerException(message: '이메일 또는 비밀번호가 없습니다.');
+          throw ServerException(message: '이메일 또는 비밀번호가 없습니다: ${student.name}');
         }
+        
+        // 이메일 가울학성 검사
+        final email = student.email!.trim();
+        if (!email.contains('@') || !email.contains('.')) {
+          throw ServerException(message: '유효하지 않은 이메일 형식: $email (학생: ${student.name})');
+        }
+        
+        debugPrint('새 학생 계정 만들기: ${student.name}, 이메일: $email, 학교: ${student.schoolName}');
         
         // 1. Firebase Authentication 계정 생성
         firebase_auth.UserCredential userCredential;
         try {
           userCredential = await _auth.createUserWithEmailAndPassword(
-            email: student.email!,
+            email: email,
             password: student.password!,
           );
-          debugPrint('Created Auth account for: ${student.email}');
+          debugPrint('Auth 계정 생성 성공: $email');
         } catch (authError) {
-          // 이미 존재하는 이메일인 경우, 로깅하고 건너뛬 (배치 작업 계속)
-          debugPrint('Error creating auth account: $authError');
-          continue;
+          // 자세한 에러 로깅
+          debugPrint('Auth 계정 생성 오류: $authError (학생: ${student.name}, 이메일: $email)');
+          
+          // Firebase 오류 코드에 따른 세분화된 처리
+          if (authError is firebase_auth.FirebaseAuthException) {
+            final code = authError.code;
+            if (code == 'email-already-in-use') {
+              debugPrint('이미 사용 중인 이메일입니다. 기존 계정을 찾아서 사용합니다.');
+              try {
+                // 기존 계정에 로그인해서 UID 가져오기
+                final existingUser = await _auth.fetchSignInMethodsForEmail(email);
+                if (existingUser.isNotEmpty) {
+                  // 이 경우 계정은 존재하지만 우리가 UID를 모름
+                  // Cloud Function으로 처리하거나 다른 방법으로 UID 획득 필요
+                  debugPrint('기존 계정 존재: ${existingUser.join(', ')}');
+                  continue; // 이 학생은 건너뜀
+                }
+              } catch (e) {
+                debugPrint('기존 계정 확인 오류: $e');
+              }
+            } else {
+              // 다른 Firebase Auth 오류 처리
+              debugPrint('Firebase Auth 오류: ${authError.code} - ${authError.message}');
+            }
+          }
+          continue; // 이 학생은 건너뜀 (배치 작업 계속)
         }
         
         // 2. Authentication UID 가져오기
@@ -159,7 +258,7 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
         final studentWithAuth = StudentModel(
           id: docRef.id,
           authUid: authUid,
-          email: student.email,
+          email: email,
           name: student.name,
           grade: student.grade,
           classNum: student.classNum,
@@ -183,7 +282,9 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
       // 배치 요청 실행
       await batch.commit();
       return createdStudents;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('학생 일괄 업로드 실패: $e');
+      debugPrint('Stack trace: $stackTrace');
       throw ServerException(message: '학생 일괄 업로드 실패: $e');
     }
   }

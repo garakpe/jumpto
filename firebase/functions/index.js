@@ -1,5 +1,7 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const cors = require("cors")({ origin: true });
+
 admin.initializeApp();
 
 // 리전 설정 (asia-northeast3는 서울 리전입니다)
@@ -368,110 +370,121 @@ exports.updateStudentGender = regionalFunctions.https.onCall(
  *
  * 학생이 학교명과 학번을 이용하여 로그인할 수 있는 함수입니다.
  */
-exports.studentLogin = regionalFunctions.https.onCall(async (data, context) => {
-  // 요청 데이터 검증
-  if (!data.schoolName || !data.studentId || !data.password) {
-    throw new functions.https.HttpsError(
-      "invalid-argument",
-      "학교명, 학번, 비밀번호가 필요합니다."
-    );
-  }
-
-  try {
-    // 학교명으로 학교 정보 조회
-    const schoolsSnapshot = await admin
-      .firestore()
-      .collection("schools")
-      .where("schoolName", "==", data.schoolName)
-      .limit(1)
-      .get();
-
-    if (schoolsSnapshot.empty) {
-      throw new functions.https.HttpsError(
-        "not-found",
-        "해당 학교 정보를 찾을 수 없습니다."
-      );
-    }
-
-    const schoolData = schoolsSnapshot.docs[0].data();
-    const schoolCode = schoolData.schoolCode; // schoolCode 사용
-
-    // 학생 이메일 구성
-    const email = `${data.studentId}@school${schoolCode}.com`;
-
+exports.studentLogin = regionalFunctions.https.onRequest(async (req, res) => {
+  // CORS 허용
+  return cors(req, res, async () => {
     try {
-      // Firebase Authentication으로 로그인 시도
-      const userCredential = await admin.auth().getUserByEmail(email);
+      // POST 요청인지 확인
+      if (req.method !== 'POST') {
+        res.status(405).send('Method Not Allowed');
+        return;
+      }
 
-      // 학생 정보 조회
-      const studentsSnapshot = await admin
+      // 요청 데이터 가져오기
+      const data = req.body;
+
+      // 요청 데이터 검증
+      if (!data.schoolName || !data.studentId || !data.password) {
+        res.status(400).json({
+          success: false,
+          message: '학교명, 학번, 비밀번호가 필요합니다.'
+        });
+        return;
+      }
+
+      // 학교명으로 학교 정보 조회
+      const schoolsSnapshot = await admin
         .firestore()
-        .collection("students")
-        .where("authUid", "==", userCredential.uid)
+        .collection("schools")
+        .where("schoolName", "==", data.schoolName)
         .limit(1)
         .get();
 
-      if (studentsSnapshot.empty) {
-        throw new functions.https.HttpsError(
-          "not-found",
-          "학생 정보를 찾을 수 없습니다."
-        );
+      if (schoolsSnapshot.empty) {
+        res.status(404).json({
+          success: false,
+          message: '해당 학교 정보를 찾을 수 없습니다.'
+        });
+        return;
       }
 
-      const studentDoc = studentsSnapshot.docs[0];
-      const studentData = studentDoc.data();
+      const schoolData = schoolsSnapshot.docs[0].data();
+      const schoolCode = schoolData.schoolCode; // schoolCode 사용
 
-      // Custom Token 생성 (클라이언트에서 signInWithCustomToken으로 사용)
-      const customToken = await admin
-        .auth()
-        .createCustomToken(userCredential.uid, {
-          role: "student",
-          studentId: studentData.studentId,
-          grade: studentData.grade,
-          classNum: studentData.classNum,
-          studentNum: studentData.studentNum,
-          schoolCode: studentData.schoolCode,
-          schoolName: studentData.schoolName,
+      // 학생 이메일 구성
+      const email = `${data.studentId}@school${schoolCode}.com`;
+
+      try {
+        // Firebase Authentication으로 로그인 시도
+        const userCredential = await admin.auth().getUserByEmail(email);
+
+        // 학생 정보 조회
+        const studentsSnapshot = await admin
+          .firestore()
+          .collection("students")
+          .where("authUid", "==", userCredential.uid)
+          .limit(1)
+          .get();
+
+        if (studentsSnapshot.empty) {
+          res.status(404).json({
+            success: false,
+            message: '학생 정보를 찾을 수 없습니다.'
+          });
+          return;
+        }
+
+        const studentDoc = studentsSnapshot.docs[0];
+        const studentData = studentDoc.data();
+
+        // Custom Token 생성 (클라이언트에서 signInWithCustomToken으로 사용)
+        const customToken = await admin
+          .auth()
+          .createCustomToken(userCredential.uid, {
+            role: "student",
+            studentId: studentData.studentId,
+            grade: studentData.grade,
+            classNum: studentData.classNum,
+            studentNum: studentData.studentNum,
+            schoolCode: studentData.schoolCode,
+            schoolName: studentData.schoolName,
+          });
+
+        // 마지막 로그인 시간 업데이트
+        await studentDoc.ref.update({
+          lastLoginAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-      // 마지막 로그인 시간 업데이트
-      await studentDoc.ref.update({
-        lastLoginAt: admin.firestore.FieldValue.serverTimestamp(),
+        // 성공 응답 반환
+        res.status(200).json({
+          success: true,
+          customToken: customToken,
+          studentData: {
+            id: studentDoc.id,
+            name: studentData.name,
+            grade: studentData.grade,
+            classNum: studentData.classNum,
+            studentNum: studentData.studentNum,
+            gender: studentData.gender,
+            schoolName: studentData.schoolName,
+            schoolCode: studentData.schoolCode,
+          },
+        });
+      } catch (authError) {
+        console.error("Authentication error:", authError);
+        // 로그인 실패 시 사용자 정보가 일치하지 않는다는 메시지 반환
+        res.status(401).json({
+          success: false,
+          message: '학교명, 학번 또는 비밀번호가 일치하지 않습니다.'
+        });
+      }
+    } catch (error) {
+      console.error("Error in student login:", error);
+      // 서버 오류 반환
+      res.status(500).json({
+        success: false,
+        message: `로그인 중 오류가 발생했습니다: ${error.message}`
       });
-
-      return {
-        success: true,
-        customToken: customToken,
-        studentData: {
-          id: studentDoc.id,
-          name: studentData.name,
-          grade: studentData.grade,
-          classNum: studentData.classNum,
-          studentNum: studentData.studentNum,
-          gender: studentData.gender,
-          schoolName: studentData.schoolName,
-          schoolCode: studentData.schoolCode,
-        },
-      };
-    } catch (authError) {
-      console.error("Authentication error:", authError);
-      // 로그인 실패 시 사용자 정보가 일치하지 않는다는 메시지 반환
-      throw new functions.https.HttpsError(
-        "not-found",
-        "학교명, 학번 또는 비밀번호가 일치하지 않습니다."
-      );
     }
-  } catch (error) {
-    console.error("Error in student login:", error);
-
-    // 이미 HttpsError인 경우 그대로 전달
-    if (error instanceof functions.https.HttpsError) {
-      throw error;
-    }
-
-    throw new functions.https.HttpsError(
-      "internal",
-      `로그인 중 오류가 발생했습니다: ${error.message}`
-    );
-  }
+  });
 });
