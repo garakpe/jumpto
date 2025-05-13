@@ -258,6 +258,19 @@
   - Cloud Function 함수의 일관성 확보 (모두 Callable 함수로 통일)
   - 에러 처리 로직 개선
 
+### 최근 완료된 작업 (Cloud Functions 버그 해결)
+
+- FirebaseDataSeed 클래스 개선
+  - `_seedSchools` 메서드 추가하여 학교 정보를 Firestore에 저장
+  - "가락고등학교" 및 다른 테스트 학교 정보 추가
+  - 테스트 교사 및 학생 계정에 학교 정보 연결
+- FirebaseInitializer 업데이트
+  - 앱 초기화 시 테스트 데이터 시드 실행 로직 추가
+  - 디버그 모드에서만 데이터 시드 동작하도록 설정
+- main.dart 업데이트
+  - Firebase 초기화 방식 수정 (FirebaseInitializer 클래스 사용)
+  - 학교 데이터 시드 적용
+
 ### 다음 예정 작업
 
 - Cloud Functions 배포 및 테스트
@@ -272,7 +285,7 @@
   - schoolCode 필드를 학교 코드 뒤 4자리 숫자로 통일
   - schoolName 필드를 학교명으로 통일
   - 학생 인증용 이메일 형식: "(연도 두자리)(학번)@school(학교코드 뒤 4자리).com"
-    - 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com
+    - 예: 가락고등학교 3학년 1반 1번, 25년도 → 2530101@school3550.com
 - 교사 대시보드에 학생 비밀번호 초기화 기능 추가
   - 학생 관리 화면에 비밀번호 초기화 버튼 추가
   - 초기화 확인 모달 구현
@@ -299,6 +312,7 @@
 - student_remote_datasource.dart에서 FirebaseFunctions 임포트 누락 문제 ✅
 - sign_in_student.dart와 auth_repository.dart 간의 메서드 파라미터 불일치 문제 (studentNum vs studentId) ✅
 - 학생 로그인 시 HTTP 직접 호출로 인한 CORS 이슈 발생 ✅
+- Cloud Functions에서 "해당 학교 정보를 찾을 수 없습니다." 에러 발생 ✅
 
 ### 새로 추가된 내용
 
@@ -358,6 +372,9 @@
   - 직접 HTTP 호출 대신 Firebase SDK `httpsCallable` 사용 ✅
   - studentLogin 함수 타입 변경 (HTTP 요청 → Callable 함수) ✅
   - 일관된 Cloud Functions 처리 방식 적용 ✅
+- Firestore 학교 데이터 추가 기능 구현 ✅
+  - FirebaseDataSeed 클래스에 학교 데이터 시드 기능 추가 ✅
+  - 앱 초기화 시 학교 데이터 자동 추가 기능 구현 ✅
 
 ### 테스트 계정 정보
 
@@ -493,6 +510,7 @@
 - Firebase Hosting 설정 및 웹앱 배포 완료
 - Firestore 보안 규칙 구현 완료
 - 초기 관리자 계정 자동 생성 기능 구현 완료
+- 학교 데이터 시드 기능 구현 완료
 
 ## 향후 개선 사항
 

@@ -14,6 +14,7 @@ abstract class AuthRepository {
     required String password,
     required String displayName,
     String? schoolCode,
+    String? schoolName,
     String? phoneNumber,
   });
 

@@ -289,6 +289,9 @@ class _RegisterPageState extends State<RegisterPage> {
       final schoolCode = _selectedSchool!.code != 'custom'
           ? _selectedSchool!.code
           : _selectedSchool!.name;
+          
+      // 학교 이름 가져오기
+      final schoolName = _selectedSchool!.name;
 
       final phoneNumber = _phoneController.text.trim();
 
@@ -297,6 +300,7 @@ class _RegisterPageState extends State<RegisterPage> {
         password: _passwordController.text,
         displayName: _nameController.text.trim(),
         schoolCode: schoolCode,
+        schoolName: schoolName,
         phoneNumber: phoneNumber,
       );
     }

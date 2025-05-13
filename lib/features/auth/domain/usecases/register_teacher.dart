@@ -19,6 +19,7 @@ class RegisterTeacher implements UseCase<User, RegisterTeacherParams> {
       password: params.password,
       displayName: params.displayName,
       schoolCode: params.schoolCode,
+      schoolName: params.schoolName,
       phoneNumber: params.phoneNumber,
     );
   }
@@ -30,6 +31,7 @@ class RegisterTeacherParams extends Equatable {
   final String password;
   final String displayName;
   final String? schoolCode;
+  final String? schoolName;
   final String? phoneNumber;
 
   const RegisterTeacherParams({
@@ -37,6 +39,7 @@ class RegisterTeacherParams extends Equatable {
     required this.password,
     required this.displayName,
     this.schoolCode,
+    this.schoolName,
     this.phoneNumber,
   });
 
@@ -46,10 +49,11 @@ class RegisterTeacherParams extends Equatable {
     password,
     displayName,
     schoolCode,
+    schoolName,
     phoneNumber,
   ];
 
   @override
   String toString() =>
-      'RegisterTeacherParams(email: $email, displayName: $displayName)';
+      'RegisterTeacherParams(email: $email, displayName: $displayName, schoolName: $schoolName)';
 }

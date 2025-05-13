@@ -1,10 +1,9 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:universal_html/html.dart' as html;
 
-import 'core/firebase/firebase_data_seed.dart';
+import 'core/firebase/firebase_initializer.dart';
 import 'core/presentation/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
 import 'features/admin/presentation/cubit/admin_cubit.dart';
@@ -13,20 +12,16 @@ import 'features/auth/presentation/cubit/student_cubit.dart';
 import 'features/common/presentation/cubit/school_cubit.dart';
 import 'features/paps/presentation/cubit/paps_cubit.dart';
 import 'features/teacher_dashboard/presentation/cubit/teacher_settings_cubit.dart';
-import 'firebase_options.dart';
 import 'di/injection_container.dart' as di;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Firebase 초기화
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Firebase 초기화 (업데이트됨)
+  await FirebaseInitializer.initialize();
 
   // 의존성 주입 초기화
   await di.init();
-
-  // 테스트 데이터 시드 실행 (필요한 경우)
-  // await di.sl<FirebaseDataSeed>().seedTestData();
 
   // 웹 환경에서 PAPS 기준표 미리 로드
   if (kIsWeb) {

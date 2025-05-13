@@ -15,6 +15,7 @@ abstract class AuthRemoteDataSource {
     required String password,
     required String displayName,
     String? schoolCode,
+    String? schoolName,
     String? phoneNumber,
   });
 
@@ -74,6 +75,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   /// 학생 컬렉션 참조
   CollectionReference get _studentsCollection =>
       _firestore.collection('students');
+      
+  /// 학교 컬렉션 참조
+  CollectionReference get _schoolsCollection =>
+      _firestore.collection('schools');
 
   AuthRemoteDataSourceImpl(
     this._firebaseAuth,
@@ -138,6 +143,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String password,
     required String displayName,
     String? schoolCode,
+    String? schoolName,
     String? phoneNumber,
   }) async {
     try {
@@ -149,14 +155,45 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
       final uid = userCredential.user!.uid;
 
+      // 학교 정보 검증
+      if (schoolCode != null && schoolCode.isNotEmpty && 
+          schoolName != null && schoolName.isNotEmpty) {
+        
+        // 'schools' 컬렉션에 학교 정보가 있는지 확인
+        final schoolsSnapshot = await _schoolsCollection
+            .where('schoolName', isEqualTo: schoolName)
+            .limit(1)
+            .get();
+
+        // 학교 정보가 없으면 새로 추가
+        if (schoolsSnapshot.docs.isEmpty) {
+          print('학교 정보를 schools 컬렉션에 추가합니다: $schoolName');
+          await _schoolsCollection.add({
+            'schoolName': schoolName,
+            'schoolCode': schoolCode,
+            'address': '', // 필요 시 추가 정보 입력
+            'type': '고등학교', // 기본값, 필요 시 수정
+            'region': '서울', // 기본값, 필요 시 수정
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+          print('학교 정보가 성공적으로 추가되었습니다: $schoolName');
+        } else {
+          print('이미 schools 컬렉션에 학교 정보가 존재합니다: $schoolName');
+        }
+      }
+
       // Firestore에 교사 정보 저장
       await _usersCollection.doc(uid).set({
         'email': email,
         'displayName': displayName,
         'role': 'teacher',
         'schoolCode': schoolCode,
+        'schoolName': schoolName, // 학교 이름 추가
         'phoneNumber': phoneNumber,
+        'authUid': uid,
+        'isApproved': false, // 기본적으로 승인되지 않은 상태
         'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
       });
 
       // 사용자 데이터 반환
@@ -166,7 +203,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         displayName: displayName,
         role: domain.UserRole.teacher,
         schoolCode: schoolCode,
+        schoolName: schoolName, // 학교 이름 추가
         phoneNumber: phoneNumber,
+        isApproved: false, // 기본적으로 승인되지 않은 상태
       );
     } catch (e) {
       print('교사 회원가입 오류: $e');
@@ -231,12 +270,15 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'displayName': displayName,
         'role': 'student',
         'schoolCode': schoolCode,
+        'schoolName': schoolName,
         'classNum': classNum,
         'studentNum': studentNum,
         'studentId': studentId,
         'gender': gender,
         'teacherId': teacherId,
+        'authUid': uid,
         'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
       });
 
       // 학생 컬렉션에도 정보 저장
@@ -250,7 +292,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'studentId': studentId,
         'gender': gender,
         'teacherId': teacherId,
+        'authUid': uid,
         'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
       });
 
       // 사용자 데이터 반환
