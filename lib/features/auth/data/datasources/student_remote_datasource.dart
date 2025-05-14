@@ -281,11 +281,15 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
           schoolName: student.schoolName,
           attendance: student.attendance,
           createdAt: student.createdAt,
+          password: student.password, // 중요: 초기 비밀번호 포함
           gender: student.gender,
         );
         
         // 5. Firestore에 학생 정보 저장 (배치에 추가)
-        batch.set(docRef, studentWithAuth.toFirestore());
+        // toFirestore() 메서드가 모든 필수 필드를 포함하는지 확인
+        final firestoreData = studentWithAuth.toFirestore();
+        debugPrint('학생 Firestore 데이터 확인: ${firestoreData.keys.join(', ')}');
+        batch.set(docRef, firestoreData);
         
         // 6. 생성된 학생 저장
         createdStudents.add(studentWithAuth);

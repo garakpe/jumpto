@@ -650,7 +650,9 @@ exports.studentLogin = onCall(
       logger.info(`학교 코드 찾음: ${schoolCode}`, { schoolName, schoolCode });
 
       // 3. 학생 이메일 구성
-      const email = `${studentId}@school${schoolCode}.com`;
+      // 이메일 형식: (연도 두자리)(학번)@school(학교코드).com
+      const currentYear = new Date().getFullYear().toString().slice(-2); // 연도 마지막 2자리
+      const email = `${currentYear}${studentId}@school${schoolCode}.com`;
       logger.info(`학생 이메일 구성: ${email}`, {
         studentId,
         schoolCode,

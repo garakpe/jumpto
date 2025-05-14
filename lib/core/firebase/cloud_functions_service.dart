@@ -10,8 +10,9 @@ class CloudFunctionsService {
   final FirebaseFunctions _functions;
 
   CloudFunctionsService({FirebaseFunctions? functions})
-    : _functions =
-          functions ?? FirebaseFunctions.instanceFor(region: 'asia-northeast3');
+    : _functions = functions ?? FirebaseFunctions.instanceFor(region: 'asia-northeast3') {
+    debugPrint('Cloud Functions 서비스 초기화 - 리전: asia-northeast3');
+  }
 
   /// 학생 비밀번호 초기화
   ///
@@ -101,18 +102,31 @@ class CloudFunctionsService {
     required String password,
   }) async {
     try {
+      // 디버그 로그 추가
+      debugPrint('학생 로그인 시도 - 학교: $schoolName, 학번: $studentId');
+      // region은 객체에서 직접 접근할 수 없음
+      debugPrint('Cloud Function 리전: asia-northeast3');
+      
       // Firebase SDK의 httpsCallable을 사용하여 함수 호출
       final callable = _functions.httpsCallable('studentLogin');
-      final result = await callable.call({
+      debugPrint('함수 호출 준비 완료: studentLogin');
+      
+      // 파라미터 로그
+      final params = {
         'schoolName': schoolName,
         'studentId': studentId,
         'password': password,
-      });
+      };
+      debugPrint('전송할 파라미터: $params');
+      
+      // 함수 호출
+      final result = await callable.call(params);
 
       debugPrint('학생 로그인 결과: ${result.data}');
 
       // 결과 데이터 반환
       if (result.data is Map && result.data['success'] != true) {
+        debugPrint('함수 호출 실패: ${result.data['message']}');
         throw ServerException(
           message: result.data['message'] ?? '로그인에 실패했습니다'
         );

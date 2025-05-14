@@ -380,10 +380,35 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       debugPrint('학생 로그인 시도: 학교=$schoolName, 학번=$studentId');
       
+      // 학교 이름 트림 처리
+      final trimmedSchoolName = schoolName.trim();
+      final trimmedStudentId = studentId.trim();
+      
+      debugPrint('학교 이름 처리: "$trimmedSchoolName", 학번: "$trimmedStudentId"');
+      
+      // 학교 정보 조회 - Firestore에서 학교 이름으로 학교 코드 확인
+      try {
+        final schoolsSnapshot = await _schoolsCollection
+        .where('schoolName', isEqualTo: trimmedSchoolName)
+        .limit(1)
+        .get();
+            
+        if (schoolsSnapshot.docs.isNotEmpty) {
+        final docData = schoolsSnapshot.docs.first.data() as Map<String, dynamic>;
+          final schoolCode = docData['schoolCode'] as String?;
+            debugPrint('학교 정보 찾음: $trimmedSchoolName (code: $schoolCode)');
+          } else {
+          debugPrint('학교 정보를 찾을 수 없음: $trimmedSchoolName');
+        }
+      } catch (e) {
+        debugPrint('학교 정보 조회 오류: $e');
+      }
+      
       // Cloud Functions를 사용하여 학생 로그인
+      debugPrint('Cloud Functions 호출 시작 - studentLogin');
       final result = await _cloudFunctionsService.studentLogin(
-        schoolName: schoolName,
-        studentId: studentId,
+        schoolName: trimmedSchoolName,
+        studentId: trimmedStudentId,
         password: password,
       );
       
@@ -391,17 +416,21 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
       // 커스텀 토큰으로 로그인
       if (result['customToken'] != null) {
+        debugPrint('커스텀 토큰을 사용하여 Firebase 인증 시도');
         await _firebaseAuth.signInWithCustomToken(result['customToken']);
         debugPrint('커스텀 토큰으로 로그인 성공');
       } else {
+        debugPrint('커스텀 토큰이 없습니다.');
         throw ServerException(message: '인증 토큰이 없습니다');
       }
 
       // 인증 후 사용자 정보 가져오기
       final firebaseUser = _firebaseAuth.currentUser;
       if (firebaseUser == null) {
+        debugPrint('Firebase 인증 후 사용자 정보가 없습니다.');
         throw ServerException(message: '로그인에 실패했습니다.');
       }
+      debugPrint('Firebase 사용자 확인: ${firebaseUser.uid}');
 
       // 학생 정보 구성
       final studentData = result['studentData'] as Map<String, dynamic>;

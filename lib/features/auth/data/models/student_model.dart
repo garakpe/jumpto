@@ -144,6 +144,9 @@ class StudentModel extends Student {
     if (authUid != null) {
       map['authUid'] = authUid;
     }
+    
+    // 비밀번호는 절대 Firestore에 저장하지 않음 (보안상 위험)
+    // password 필드는 오직 Firebase Auth 계정 생성 시에만 사용하고 저장하지 않음
 
     return map;
   }
