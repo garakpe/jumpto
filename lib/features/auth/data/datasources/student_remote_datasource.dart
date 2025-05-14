@@ -133,6 +133,7 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
       
       // 현재 로그인한 교사 정보 가져오기
       String teacherSchoolName = '';
+      String teacherSchoolCode = '';
       try {
         final currentUser = _auth.currentUser;
         if (currentUser != null) {
@@ -143,8 +144,10 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
               .get();
           
           if (teacherDoc.docs.isNotEmpty) {
-            teacherSchoolName = teacherDoc.docs.first.data()['schoolName'] ?? '';
-            debugPrint('교사 학교 정보: $teacherSchoolName');
+            final teacherData = teacherDoc.docs.first.data();
+            teacherSchoolName = teacherData['schoolName'] ?? '';
+            teacherSchoolCode = teacherData['schoolCode'] ?? '';
+            debugPrint('교사 학교 정보: $teacherSchoolName (코드: $teacherSchoolCode)');
           }
         }
       } catch (e) {
@@ -153,18 +156,27 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
       
       // 학생 수정 (학교명 및 이메일 형식 수정)
       for (final student in students) {
-        // 학교 코드의 마지막 4자리만 사용
-        String schoolCode = student.schoolCode;
-        if (schoolCode.length >= 4) {
-          schoolCode = schoolCode.substring(schoolCode.length - 4);
+        // 항상 학교 코드의 마지막 4자리만 사용
+        String shortSchoolCode = '';
+        if (teacherSchoolCode.isNotEmpty) {
+          // 교사 정보에서 학교 코드 가져오기
+          shortSchoolCode = teacherSchoolCode.length > 4 
+              ? teacherSchoolCode.substring(teacherSchoolCode.length - 4) 
+              : teacherSchoolCode.padLeft(4, '0');
+        } else if (student.schoolCode.isNotEmpty) {
+          // 학생 정보에서 학교 코드 가져오기
+          shortSchoolCode = student.schoolCode.length > 4 
+              ? student.schoolCode.substring(student.schoolCode.length - 4) 
+              : student.schoolCode.padLeft(4, '0');
         } else {
-          schoolCode = schoolCode.padLeft(4, '0');
+          // 기본값 설정
+          shortSchoolCode = '0000';
         }
         
-        // 이메일 생성
+        // 이메일 생성 - 일관된 형식 사용
         final DateTime now = DateTime.now();
         final String currentYearSuffix = now.year.toString().substring(2);
-        final String email = '$currentYearSuffix${student.studentId}@school$schoolCode.com';
+        final String email = '$currentYearSuffix${student.studentId}@school$shortSchoolCode.com';
         
         // 학교명은 교사 정보에서 가져오기
         final String schoolName = teacherSchoolName.isNotEmpty ? teacherSchoolName : student.schoolName;
@@ -180,11 +192,11 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
           studentNum: student.studentNum,
           studentId: student.studentId,
           teacherId: student.teacherId,
-          schoolCode: schoolCode,
+          schoolCode: shortSchoolCode, // 짧은 학교 코드 사용
           schoolName: schoolName,
           attendance: student.attendance,
           createdAt: student.createdAt,
-          password: '123456',
+          password: '123456', // Firebase 요구사항 충족을 위한 6자 이상 비밀번호
           gender: student.gender,
         );
         
@@ -193,7 +205,7 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
       
       // 학생 정보 로그 출력
       for (final student in updatedStudents) {
-        debugPrint('학생 정보: 이름=${student.name}, 이메일=${student.email}, 학번=${student.studentId}, 학교=${student.schoolName}');
+        debugPrint('학생 정보: 이름=${student.name}, 이메일=${student.email}, 학번=${student.studentId}, 학교=${student.schoolName}, 학교코드=${student.schoolCode}');
       }
       
       for (final student in updatedStudents) {
@@ -203,7 +215,7 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
           throw ServerException(message: '이메일 또는 비밀번호가 없습니다: ${student.name}');
         }
         
-        // 이메일 가울학성 검사
+        // 이메일 유효성 검사
         final email = student.email!.trim();
         if (!email.contains('@') || !email.contains('.')) {
           throw ServerException(message: '유효하지 않은 이메일 형식: $email (학생: ${student.name})');

@@ -271,6 +271,22 @@
   - Firebase 초기화 방식 수정 (FirebaseInitializer 클래스 사용)
   - 학교 데이터 시드 적용
 
+### 최근 완료된 작업 (인증 시스템 버그 수정) ✅
+
+- 학생 로그인 프로세스 개선 ✅
+  - 이메일 형식 불일치 문제 해결 (학교 코드 마지막 4자리만 사용) ✅
+  - CloudFunctionsService 클래스 개선 (모든 함수를 httpsCallable로 호출) ✅
+  - 적절한 에러 처리 및 메시지 표시 추가 ✅
+- 학교 정보 문제 해결 ✅
+  - FirebaseDataSeed 클래스에 학교 데이터 시드 기능 개선 ✅
+  - 교사 회원가입 시 학교 정보 자동 추가 로직 추가 ✅
+  - 짧은 학교 코드(마지막 4자리) 일관성 확보 ✅
+- 코드 리팩토링 ✅
+  - 디버그 로그 추가 (학생 로그인 과정 추적) ✅
+  - 모든 데이터 소스에서 예외 처리 통일 (ServerException 사용) ✅
+  - AuthRemoteDataSource의 signInStudent 메서드 개선 ✅
+  - StudentRemoteDataSourceImpl의 uploadStudents 메서드 개선 ✅
+
 ### 다음 예정 작업
 
 - Cloud Functions 배포 및 테스트
@@ -375,6 +391,10 @@
 - Firestore 학교 데이터 추가 기능 구현 ✅
   - FirebaseDataSeed 클래스에 학교 데이터 시드 기능 추가 ✅
   - 앱 초기화 시 학교 데이터 자동 추가 기능 구현 ✅
+- 인증 시스템 버그 수정 ✅
+  - 학생 이메일 형식 통일 (학교 코드 마지막 4자리만 사용) ✅
+  - 모든 Cloud Functions 호출을 httpsCallable로 통일 ✅
+  - 적절한 에러 처리 및 로깅 추가 ✅
 
 ### 테스트 계정 정보
 
@@ -511,6 +531,10 @@
 - Firestore 보안 규칙 구현 완료
 - 초기 관리자 계정 자동 생성 기능 구현 완료
 - 학교 데이터 시드 기능 구현 완료
+- Cloud Functions 개선 및 문제 해결 ✅
+  - studentLogin 함수를 Callable 함수로 변경 ✅
+  - 모든 함수 호출 방식을 일관되게 httpsCallable로 통일 ✅
+  - 에러 처리 및 로깅 개선 ✅
 
 ## 향후 개선 사항
 

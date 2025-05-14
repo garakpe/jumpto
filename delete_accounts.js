@@ -1,5 +1,5 @@
 const admin = require("firebase-admin");
-const serviceAccount = require("./jumpto-web-firebase-adminsdk-fbsvc-23b5cbd745.json");
+const serviceAccount = require("./jumpto-web-firebase-adminsdk-fbsvc-bf271d9a43.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),

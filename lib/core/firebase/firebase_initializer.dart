@@ -16,11 +16,11 @@ class FirebaseInitializer {
         options: DefaultFirebaseOptions.currentPlatform,
       );
       
-      print('Firebase가 성공적으로 초기화되었습니다.');
+      debugPrint('Firebase가 성공적으로 초기화되었습니다.');
       
       // 개발 모드에서만 테스트 데이터 시드 실행
       if (kDebugMode) {
-        print('테스트 데이터 시드를 실행합니다...');
+        debugPrint('테스트 데이터 시드를 실행합니다...');
         final firebaseDataSeed = FirebaseDataSeed(
           FirebaseAuth.instance,
           FirebaseFirestore.instance,
@@ -28,7 +28,7 @@ class FirebaseInitializer {
         await firebaseDataSeed.seedTestData();
       }
     } catch (e) {
-      print('Firebase 초기화 중 오류 발생: $e');
+      debugPrint('Firebase 초기화 중 오류 발생: $e');
       rethrow;
     }
   }

@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import '../../../../core/firebase/cloud_functions_service.dart';
+import '../../../../core/error/exceptions.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/user.dart' as domain;
 
@@ -97,7 +99,6 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   /// Firebase 인증 사용자 ID로 사용자 정보 가져오기
-  /// Firebase 인증 사용자 ID로 사용자 정보 가져오기
   Future<domain.User?> _getUserData(String uid) async {
     try {
       // 사용자 컬렉션에서 조회
@@ -129,10 +130,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         studentId: userData['studentId'],
         gender: userData['gender'],
         phoneNumber: userData['phoneNumber'],
-        isApproved: isApproved, // isApproved 필드 추가
+        isApproved: isApproved,
       );
     } catch (e) {
-      print('사용자 데이터 가져오기 오류: $e');
+      debugPrint('사용자 데이터 가져오기 오류: $e');
       rethrow;
     }
   }
@@ -159,6 +160,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       if (schoolCode != null && schoolCode.isNotEmpty && 
           schoolName != null && schoolName.isNotEmpty) {
         
+        // 학교 코드의 마지막 4자리만 사용
+        String shortSchoolCode = schoolCode.length > 4 
+            ? schoolCode.substring(schoolCode.length - 4) 
+            : schoolCode.padLeft(4, '0');
+        
         // 'schools' 컬렉션에 학교 정보가 있는지 확인
         final schoolsSnapshot = await _schoolsCollection
             .where('schoolName', isEqualTo: schoolName)
@@ -167,19 +173,22 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
         // 학교 정보가 없으면 새로 추가
         if (schoolsSnapshot.docs.isEmpty) {
-          print('학교 정보를 schools 컬렉션에 추가합니다: $schoolName');
+          debugPrint('학교 정보를 schools 컬렉션에 추가합니다: $schoolName (코드: $shortSchoolCode)');
           await _schoolsCollection.add({
             'schoolName': schoolName,
-            'schoolCode': schoolCode,
+            'schoolCode': shortSchoolCode,
             'address': '', // 필요 시 추가 정보 입력
             'type': '고등학교', // 기본값, 필요 시 수정
             'region': '서울', // 기본값, 필요 시 수정
             'createdAt': FieldValue.serverTimestamp(),
           });
-          print('학교 정보가 성공적으로 추가되었습니다: $schoolName');
+          debugPrint('학교 정보가 성공적으로 추가되었습니다: $schoolName');
         } else {
-          print('이미 schools 컬렉션에 학교 정보가 존재합니다: $schoolName');
+          debugPrint('이미 schools 컬렉션에 학교 정보가 존재합니다: $schoolName');
         }
+        
+        // schoolCode를 짧은 버전으로 업데이트
+        schoolCode = shortSchoolCode;
       }
 
       // Firestore에 교사 정보 저장
@@ -188,7 +197,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'displayName': displayName,
         'role': 'teacher',
         'schoolCode': schoolCode,
-        'schoolName': schoolName, // 학교 이름 추가
+        'schoolName': schoolName,
         'phoneNumber': phoneNumber,
         'authUid': uid,
         'isApproved': false, // 기본적으로 승인되지 않은 상태
@@ -203,12 +212,12 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         displayName: displayName,
         role: domain.UserRole.teacher,
         schoolCode: schoolCode,
-        schoolName: schoolName, // 학교 이름 추가
+        schoolName: schoolName,
         phoneNumber: phoneNumber,
         isApproved: false, // 기본적으로 승인되지 않은 상태
       );
     } catch (e) {
-      print('교사 회원가입 오류: $e');
+      debugPrint('교사 회원가입 오류: $e');
       rethrow;
     }
   }
@@ -225,7 +234,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       // 현재 로그인한 교사 ID 가져오기
       final currentUser = _firebaseAuth.currentUser;
       if (currentUser == null) {
-        throw Exception('로그인이 필요합니다.');
+        throw ServerException(message: '로그인이 필요합니다.');
       }
 
       final teacherId = currentUser.uid;
@@ -235,11 +244,18 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final teacherData = teacherDoc.data() as Map<String, dynamic>;
 
       if (teacherData['role'] != 'teacher') {
-        throw Exception('교사만 학생 계정을 생성할 수 있습니다.');
+        throw ServerException(message: '교사만 학생 계정을 생성할 수 있습니다.');
       }
 
-      final schoolCode = teacherData['schoolCode'];
+      String schoolCode = teacherData['schoolCode'] ?? '';
       final schoolName = teacherData['schoolName'] ?? '';
+      
+      // 학교 코드의 마지막 4자리만 사용
+      if (schoolCode.length > 4) {
+        schoolCode = schoolCode.substring(schoolCode.length - 4);
+      } else {
+        schoolCode = schoolCode.padLeft(4, '0');
+      }
 
       // 학년 가져오기 (학급에서 추출)
       final grade = classNum.substring(0, 1);
@@ -311,7 +327,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         gender: gender,
       );
     } catch (e) {
-      print('학생 계정 생성 오류: $e');
+      debugPrint('학생 계정 생성 오류: $e');
       rethrow;
     }
   }
@@ -331,7 +347,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final userData = await _getUserData(uid);
 
       if (userData == null) {
-        throw Exception('사용자 정보를 찾을 수 없습니다.');
+        throw ServerException(message: '사용자 정보를 찾을 수 없습니다.');
       }
 
       // 교사 계정인 경우 승인 여부 확인
@@ -341,14 +357,17 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
         if (userDocData['isApproved'] != true) {
           await _firebaseAuth.signOut();
-          throw Exception('관리자의 승인이 필요합니다.');
+          throw ServerException(message: '관리자의 승인이 필요합니다.');
         }
       }
 
       return userData;
     } catch (e) {
-      print('이메일/비밀번호 로그인 오류: $e');
-      rethrow;
+      debugPrint('이메일/비밀번호 로그인 오류: $e');
+      if (e is ServerException) {
+        rethrow;
+      }
+      throw ServerException(message: '로그인에 실패했습니다: ${e.toString()}');
     }
   }
 
@@ -359,43 +378,55 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String password,
   }) async {
     try {
+      debugPrint('학생 로그인 시도: 학교=$schoolName, 학번=$studentId');
+      
       // Cloud Functions를 사용하여 학생 로그인
       final result = await _cloudFunctionsService.studentLogin(
         schoolName: schoolName,
         studentId: studentId,
         password: password,
       );
+      
+      debugPrint('학생 로그인 결과: ${result.toString()}');
 
       // 커스텀 토큰으로 로그인
       if (result['customToken'] != null) {
         await _firebaseAuth.signInWithCustomToken(result['customToken']);
+        debugPrint('커스텀 토큰으로 로그인 성공');
+      } else {
+        throw ServerException(message: '인증 토큰이 없습니다');
       }
 
       // 인증 후 사용자 정보 가져오기
       final firebaseUser = _firebaseAuth.currentUser;
       if (firebaseUser == null) {
-        throw Exception('로그인에 실패했습니다.');
+        throw ServerException(message: '로그인에 실패했습니다.');
       }
 
       // 학생 정보 구성
-      final studentData = result['studentData'];
+      final studentData = result['studentData'] as Map<String, dynamic>;
+      debugPrint('학생 정보: $studentData');
+      
       return domain.User(
         id: firebaseUser.uid,
-        email: firebaseUser.email ?? '$studentId@school.com',
-        displayName: studentData['name'],
+        email: firebaseUser.email ?? '',
+        displayName: studentData['name'] ?? '',
         role: domain.UserRole.student,
-        schoolCode: studentData['schoolCode'],
-        schoolName: studentData['schoolName'],
-        grade: studentData['grade'],
-        classNum: studentData['classNum'],
-        studentNum: studentData['studentNum'],
+        schoolCode: studentData['schoolCode'] ?? '',
+        schoolName: studentData['schoolName'] ?? '',
+        grade: studentData['grade'] ?? '',
+        classNum: studentData['classNum'] ?? '',
+        studentNum: studentData['studentNum'] ?? '',
         studentId: studentId,
-        gender: studentData['gender'],
+        gender: studentData['gender'] ?? '',
         isApproved: true,
       );
     } catch (e) {
-      print('학생 로그인 오류: $e');
-      rethrow;
+      debugPrint('학생 로그인 오류: $e');
+      if (e is ServerException) {
+        rethrow;
+      }
+      throw ServerException(message: '학생 로그인 중 오류가 발생했습니다: ${e.toString()}');
     }
   }
 
@@ -417,13 +448,13 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       final currentUser = _firebaseAuth.currentUser;
       if (currentUser == null) {
-        throw Exception('로그인이 필요합니다.');
+        throw ServerException(message: '로그인이 필요합니다.');
       }
 
       // 재인증 필요
       final email = currentUser.email;
       if (email == null) {
-        throw Exception('이메일 정보가 없습니다.');
+        throw ServerException(message: '이메일 정보가 없습니다.');
       }
 
       final credential = firebase_auth.EmailAuthProvider.credential(
@@ -436,8 +467,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       // 비밀번호 변경
       await currentUser.updatePassword(newPassword);
     } catch (e) {
-      print('비밀번호 변경 오류: $e');
-      rethrow;
+      debugPrint('비밀번호 변경 오류: $e');
+      throw ServerException(message: '비밀번호 변경에 실패했습니다: ${e.toString()}');
     }
   }
 
@@ -453,8 +484,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         newPassword: newPassword,
       );
     } catch (e) {
-      print('학생 비밀번호 초기화 오류: $e');
-      rethrow;
+      debugPrint('학생 비밀번호 초기화 오류: $e');
+      if (e is ServerException) {
+        rethrow;
+      }
+      throw ServerException(message: '비밀번호 초기화에 실패했습니다: ${e.toString()}');
     }
   }
 

@@ -1,7 +1,7 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:cloud_functions/cloud_functions.dart';
 import '../../features/auth/domain/entities/student.dart';
+import '../error/exceptions.dart';
+import 'package:flutter/foundation.dart';
 
 /// Cloud Functions 서비스
 ///
@@ -22,15 +22,25 @@ class CloudFunctionsService {
     required String newPassword,
   }) async {
     try {
-      final result = await _functions
-          .httpsCallable('resetStudentPassword')
-          .call({'studentId': studentId, 'newPassword': newPassword});
+      final callable = _functions.httpsCallable('resetStudentPassword');
+      final result = await callable.call({
+        'studentId': studentId, 
+        'newPassword': newPassword
+      });
 
       if (result.data['success'] != true) {
-        throw Exception(result.data['message'] ?? '비밀번호 초기화 실패');
+        throw ServerException(
+          message: result.data['message'] ?? '비밀번호 초기화 실패'
+        );
       }
+    } on FirebaseFunctionsException catch (e) {
+      debugPrint('Firebase Functions Exception (resetStudentPassword): ${e.code} - ${e.message}');
+      throw ServerException(
+        message: '비밀번호 초기화 실패: ${e.message ?? e.code}'
+      );
     } catch (e) {
-      rethrow;
+      debugPrint('학생 비밀번호 초기화 중 오류: $e');
+      throw ServerException(message: '비밀번호 초기화 중 오류가 발생했습니다');
     }
   }
 
@@ -46,35 +56,39 @@ class CloudFunctionsService {
   }) async {
     try {
       // 학생 데이터를 Map으로 변환
-      final studentsList =
-          students
-              .map(
-                (student) => {
-                  'grade': student.grade,
-                  'classNum': student.classNum,
-                  'studentNum': student.studentNum,
-                  'name': student.name,
-                  'gender': student.gender,
-                },
-              )
-              .toList();
+      final studentsList = students
+          .map((student) => {
+                'grade': student.grade,
+                'classNum': student.classNum,
+                'studentNum': student.studentNum,
+                'name': student.name,
+                'gender': student.gender,
+              })
+          .toList();
 
-      final result = await _functions
-          .httpsCallable('createBulkStudentAccounts')
-          .call({
-            'students': studentsList,
-            'schoolCode': schoolCode,
-            'schoolName': schoolName,
-            'initialPassword': initialPassword,
-          });
+      final callable = _functions.httpsCallable('createBulkStudentAccounts');
+      final result = await callable.call({
+        'students': studentsList,
+        'schoolCode': schoolCode,
+        'schoolName': schoolName,
+        'initialPassword': initialPassword,
+      });
 
       if (result.data['success'] != true) {
-        throw Exception(result.data['message'] ?? '학생 계정 일괄 생성 실패');
+        throw ServerException(
+          message: result.data['message'] ?? '학생 계정 일괄 생성 실패'
+        );
       }
 
-      return result.data;
+      return Map<String, dynamic>.from(result.data);
+    } on FirebaseFunctionsException catch (e) {
+      debugPrint('Firebase Functions Exception (createBulkStudentAccounts): ${e.code} - ${e.message}');
+      throw ServerException(
+        message: '학생 계정 생성 실패: ${e.message ?? e.code}'
+      );
     } catch (e) {
-      rethrow;
+      debugPrint('학생 계정 일괄 생성 중 오류: $e');
+      throw ServerException(message: '학생 계정 생성 중 오류가 발생했습니다');
     }
   }
 
@@ -88,41 +102,42 @@ class CloudFunctionsService {
   }) async {
     try {
       // Firebase SDK의 httpsCallable을 사용하여 함수 호출
-      final result = await _functions.httpsCallable('studentLogin').call({
+      final callable = _functions.httpsCallable('studentLogin');
+      final result = await callable.call({
         'schoolName': schoolName,
         'studentId': studentId,
         'password': password,
       });
 
+      debugPrint('학생 로그인 결과: ${result.data}');
+
       // 결과 데이터 반환
-      // Cloud Function의 응답 형식에 따라 'success' 키와 'message' 키를 확인합니다.
-      // 실제 Cloud Function의 응답 구조에 맞게 이 부분을 조정해야 할 수 있습니다.
       if (result.data is Map && result.data['success'] != true) {
-        throw Exception(result.data['message'] ?? '로그인에 실패했습니다.');
+        throw ServerException(
+          message: result.data['message'] ?? '로그인에 실패했습니다'
+        );
       }
 
-      // HttpsCallableResult의 data는 dynamic이므로, Map으로 형변환하여 반환합니다.
-      // Cloud Function이 Map<String, dynamic> 형태의 데이터를 반환한다고 가정합니다.
       return Map<String, dynamic>.from(result.data);
     } on FirebaseFunctionsException catch (e) {
       // Firebase Functions 호출과 관련된 구체적인 오류 처리
-      print(
+      debugPrint(
         'Firebase Functions Exception (studentLogin): ${e.code} - ${e.message}',
       );
-      // 사용자에게 보여줄 메시지를 여기서 결정할 수 있습니다.
-      // 예를 들어 e.code에 따라 다른 메시지를 표시할 수 있습니다.
-      String userMessage = '로그인 중 오류가 발생했습니다. (코드: ${e.code})';
+      
+      String errorMessage = '로그인 중 오류가 발생했습니다';
       if (e.code == 'unavailable') {
-        userMessage = '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.';
+        errorMessage = '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.';
       } else if (e.code == 'not-found') {
-        userMessage = '로그인 기능을 찾을 수 없습니다.';
+        errorMessage = '학교 정보를 찾을 수 없습니다. 학교명을 확인해주세요.';
+      } else if (e.code == 'permission-denied') {
+        errorMessage = '로그인 권한이 없습니다. 계정 정보를 확인해주세요.';
       }
-      // 필요하다면 e.details를 통해 추가 정보를 확인할 수도 있습니다.
-      throw Exception(userMessage);
+      
+      throw ServerException(message: errorMessage);
     } catch (e) {
-      // 그 외 일반적인 오류 처리
-      print('Unknown error during student login: $e');
-      throw Exception('알 수 없는 오류로 로그인에 실패했습니다.');
+      debugPrint('학생 로그인 중 오류: $e');
+      throw ServerException(message: '알 수 없는 오류로 로그인에 실패했습니다');
     }
   }
 
@@ -132,15 +147,54 @@ class CloudFunctionsService {
   /// 학생 권한 검증이 Cloud Functions에서 수행됨
   Future<void> updateStudentGender({required String gender}) async {
     try {
-      final result = await _functions.httpsCallable('updateStudentGender').call(
-        {'gender': gender},
-      );
+      final callable = _functions.httpsCallable('updateStudentGender');
+      final result = await callable.call({'gender': gender});
 
       if (result.data['success'] != true) {
-        throw Exception(result.data['message'] ?? '성별 정보 업데이트 실패');
+        throw ServerException(
+          message: result.data['message'] ?? '성별 정보 업데이트 실패'
+        );
       }
+    } on FirebaseFunctionsException catch (e) {
+      debugPrint('Firebase Functions Exception (updateStudentGender): ${e.code} - ${e.message}');
+      throw ServerException(
+        message: '성별 정보 업데이트 실패: ${e.message ?? e.code}'
+      );
     } catch (e) {
-      rethrow;
+      debugPrint('학생 성별 업데이트 중 오류: $e');
+      throw ServerException(message: '성별 정보 업데이트 중 오류가 발생했습니다');
+    }
+  }
+  
+  /// 학교 정보 조회 또는 생성
+  ///
+  /// 학교명으로 학교 정보를 조회하거나, 없으면 새로 생성
+  Future<Map<String, dynamic>> getOrCreateSchool({
+    required String schoolName,
+    required String schoolCode,
+  }) async {
+    try {
+      final callable = _functions.httpsCallable('getOrCreateSchool');
+      final result = await callable.call({
+        'schoolName': schoolName,
+        'schoolCode': schoolCode,
+      });
+
+      if (result.data['success'] != true) {
+        throw ServerException(
+          message: result.data['message'] ?? '학교 정보 조회/생성 실패'
+        );
+      }
+
+      return Map<String, dynamic>.from(result.data['school']);
+    } on FirebaseFunctionsException catch (e) {
+      debugPrint('Firebase Functions Exception (getOrCreateSchool): ${e.code} - ${e.message}');
+      throw ServerException(
+        message: '학교 정보 처리 실패: ${e.message ?? e.code}'
+      );
+    } catch (e) {
+      debugPrint('학교 정보 처리 중 오류: $e');
+      throw ServerException(message: '학교 정보 처리 중 오류가 발생했습니다');
     }
   }
 }

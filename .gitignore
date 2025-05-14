@@ -43,4 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-jumpto-web-firebase-adminsdk-fbsvc-23b5cbd745.json
+
+# Firebase service account keys
+jumpto-web-firebase-adminsdk-*.json
+*firebase-adminsdk*.json
