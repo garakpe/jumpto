@@ -61,6 +61,7 @@ class AuthRepositoryImpl implements AuthRepository {
         classNum: classNum,
         gender: gender,
         initialPassword: initialPassword,
+        grade: '',
       );
       return Right(user);
     } catch (e) {

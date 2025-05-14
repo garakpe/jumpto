@@ -1,11 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../../core/error/exceptions.dart';
-import '../models/student_model.dart';
-import 'package:flutter/foundation.dart';
 import '../../../../core/firebase/cloud_functions_service.dart';
+import '../models/student_model.dart';
 
 /// 학생 원격 데이터 소스 인터페이스
 abstract class StudentRemoteDataSource {
@@ -176,7 +175,7 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
         // 이메일 생성 - 일관된 형식 사용
         final DateTime now = DateTime.now();
         final String currentYearSuffix = now.year.toString().substring(2);
-        final String email = '$currentYearSuffix${student.studentId}@school$shortSchoolCode.com';
+        final String email = '$currentYearSuffix${student.studentId}@school$shortSchoolCode.com'; // 학교코드의 뒤 4자리만 사용
         
         // 학교명은 교사 정보에서 가져오기
         final String schoolName = teacherSchoolName.isNotEmpty ? teacherSchoolName : student.schoolName;
@@ -196,7 +195,8 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
           schoolName: schoolName,
           attendance: student.attendance,
           createdAt: student.createdAt,
-          password: '123456', // Firebase 요구사항 충족을 위한 6자 이상 비밀번호
+          // 항상 6자리 이상 비밀번호 사용하여 Firebase 인증 요구사항 충족
+          password: '123456', 
           gender: student.gender,
         );
         
@@ -211,8 +211,8 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
       for (final student in updatedStudents) {
         debugPrint('처리 중인 학생: ${student.name}, 이메일: ${student.email}');
         
-        if (student.email == null || student.password == null) {
-          throw ServerException(message: '이메일 또는 비밀번호가 없습니다: ${student.name}');
+        if (student.email == null) {
+          throw ServerException(message: '이메일이 없습니다: ${student.name}');
         }
         
         // 이메일 유효성 검사
@@ -221,6 +221,9 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
           throw ServerException(message: '유효하지 않은 이메일 형식: $email (학생: ${student.name})');
         }
         
+        // Firebase Auth 계정 생성 시 비밀번호 유효성 확인
+        final String studentPassword = '123456'; // 고정된 초기 비밀번호 (Cloud Functions에서 필요)
+        
         debugPrint('새 학생 계정 만들기: ${student.name}, 이메일: $email, 학교: ${student.schoolName}');
         
         // 1. Firebase Authentication 계정 생성
@@ -228,7 +231,7 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
         try {
           userCredential = await _auth.createUserWithEmailAndPassword(
             email: email,
-            password: student.password!,
+            password: studentPassword, // 고정된 초기 비밀번호 사용
           );
           debugPrint('Auth 계정 생성 성공: $email');
         } catch (authError) {
@@ -281,14 +284,29 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
           schoolName: student.schoolName,
           attendance: student.attendance,
           createdAt: student.createdAt,
-          password: student.password, // 중요: 초기 비밀번호 포함
+          // 중요: Cloud Function 트리거를 위해 반드시 password 필드 포함
+          password: studentPassword, 
           gender: student.gender,
         );
         
         // 5. Firestore에 학생 정보 저장 (배치에 추가)
         // toFirestore() 메서드가 모든 필수 필드를 포함하는지 확인
         final firestoreData = studentWithAuth.toFirestore();
+        
+        // 필수 필드 검증 - 로그 디버깅
         debugPrint('학생 Firestore 데이터 확인: ${firestoreData.keys.join(', ')}');
+        if (!firestoreData.containsKey('email') || !firestoreData.containsKey('password')) {
+          debugPrint('경고: 필수 필드(email 또는 password)가 누락됨');
+          
+          // 필수 필드가 누락된 경우 직접 추가
+          if (!firestoreData.containsKey('email')) {
+            firestoreData['email'] = email;
+          }
+          if (!firestoreData.containsKey('password')) {
+            firestoreData['password'] = studentPassword;
+          }
+        }
+        
         batch.set(docRef, firestoreData);
         
         // 6. 생성된 학생 저장

@@ -23,11 +23,12 @@ abstract class AuthRemoteDataSource {
 
   /// 학생 계정 생성 (교사에 의해)
   Future<domain.User> createStudentAccount({
-    required String displayName,
-    required String studentNum,
-    required String classNum,
-    required String gender,
-    String? initialPassword,
+    required String displayName, // 학생 이름
+    required String grade, // 학년 (추가)
+    required String classNum, // 반
+    required String studentNum, // 번호
+    required String gender, // 성별
+    String? initialPassword, // 초기 비밀번호
   });
 
   /// 이메일/비밀번호로 로그인
@@ -77,7 +78,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   /// 학생 컬렉션 참조
   CollectionReference get _studentsCollection =>
       _firestore.collection('students');
-      
+
   /// 학교 컬렉션 참조
   CollectionReference get _schoolsCollection =>
       _firestore.collection('schools');
@@ -157,23 +158,28 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final uid = userCredential.user!.uid;
 
       // 학교 정보 검증
-      if (schoolCode != null && schoolCode.isNotEmpty && 
-          schoolName != null && schoolName.isNotEmpty) {
-        
+      if (schoolCode != null &&
+          schoolCode.isNotEmpty &&
+          schoolName != null &&
+          schoolName.isNotEmpty) {
         // 학교 코드의 마지막 4자리만 사용
-        String shortSchoolCode = schoolCode.length > 4 
-            ? schoolCode.substring(schoolCode.length - 4) 
-            : schoolCode.padLeft(4, '0');
-        
+        String shortSchoolCode =
+            schoolCode.length > 4
+                ? schoolCode.substring(schoolCode.length - 4)
+                : schoolCode.padLeft(4, '0');
+
         // 'schools' 컬렉션에 학교 정보가 있는지 확인
-        final schoolsSnapshot = await _schoolsCollection
-            .where('schoolName', isEqualTo: schoolName)
-            .limit(1)
-            .get();
+        final schoolsSnapshot =
+            await _schoolsCollection
+                .where('schoolName', isEqualTo: schoolName)
+                .limit(1)
+                .get();
 
         // 학교 정보가 없으면 새로 추가
         if (schoolsSnapshot.docs.isEmpty) {
-          debugPrint('학교 정보를 schools 컬렉션에 추가합니다: $schoolName (코드: $shortSchoolCode)');
+          debugPrint(
+            '학교 정보를 schools 컬렉션에 추가합니다: $schoolName (코드: $shortSchoolCode)',
+          );
           await _schoolsCollection.add({
             'schoolName': schoolName,
             'schoolCode': shortSchoolCode,
@@ -186,7 +192,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         } else {
           debugPrint('이미 schools 컬렉션에 학교 정보가 존재합니다: $schoolName');
         }
-        
+
         // schoolCode를 짧은 버전으로 업데이트
         schoolCode = shortSchoolCode;
       }
@@ -222,11 +228,15 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     }
   }
 
+  /// AuthRemoteDataSourceImpl 클래스 내부에 구현될 createStudentAccount 메서드
+  ///
+  /// 이 코드를 AuthRemoteDataSourceImpl 클래스 내부로 복사/붙여넣기하세요.
   @override
   Future<domain.User> createStudentAccount({
     required String displayName,
-    required String studentNum,
+    required String grade, // 학년 (추가)
     required String classNum,
+    required String studentNum,
     required String gender,
     String? initialPassword,
   }) async {
@@ -249,7 +259,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
       String schoolCode = teacherData['schoolCode'] ?? '';
       final schoolName = teacherData['schoolName'] ?? '';
-      
+
       // 학교 코드의 마지막 4자리만 사용
       if (schoolCode.length > 4) {
         schoolCode = schoolCode.substring(schoolCode.length - 4);
@@ -257,14 +267,22 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         schoolCode = schoolCode.padLeft(4, '0');
       }
 
-      // 학년 가져오기 (학급에서 추출)
-      final grade = classNum.substring(0, 1);
-
       // 학번 생성 (grade + classNum + studentNum)
-      final studentId = '$grade$classNum$studentNum';
+      // 학년, 반, 번호가 단일 숫자인 경우 앞에 0 추가
+      final formattedGrade = grade.padLeft(1, '0'); // 학년은 보통 1자리
+      final formattedClassNum = classNum.padLeft(
+        2,
+        '0',
+      ); // 반은 2자리로 표시 (01, 02 등)
+      final formattedStudentNum = studentNum.padLeft(
+        2,
+        '0',
+      ); // 번호는 2자리로 표시 (01, 02 등)
 
-      // 비밀번호 설정 (기본값: 학번)
-      final password = initialPassword ?? studentNum;
+      final studentId = '$formattedGrade$formattedClassNum$formattedStudentNum';
+
+      // 비밀번호 설정 (기본값: 123456)
+      final password = initialPassword ?? '123456';
 
       // 학생 이메일 형식: "(연도 두자리)(학번)@school(학교코드 뒤 4자리).com"
       // 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com
@@ -287,8 +305,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'role': 'student',
         'schoolCode': schoolCode,
         'schoolName': schoolName,
-        'classNum': classNum,
-        'studentNum': studentNum,
+        'grade': formattedGrade,
+        'classNum': formattedClassNum,
+        'studentNum': formattedStudentNum,
         'studentId': studentId,
         'gender': gender,
         'teacherId': teacherId,
@@ -297,20 +316,23 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      // 학생 컬렉션에도 정보 저장
+      // 학생 콜렉션에도 정보 저장
       await _studentsCollection.doc(uid).set({
         'email': studentEmail,
-        'displayName': displayName,
+        'name': displayName, // students 컬렉션에서는 'name' 필드 사용
         'schoolCode': schoolCode,
         'schoolName': schoolName,
-        'classNum': classNum,
-        'studentNum': studentNum,
+        'grade': formattedGrade,
+        'classNum': formattedClassNum,
+        'studentNum': formattedStudentNum,
         'studentId': studentId,
         'gender': gender,
         'teacherId': teacherId,
         'authUid': uid,
+        'password': password, // Cloud Function에서 필요
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
+        'attendance': true, // 추가
       });
 
       // 사용자 데이터 반환
@@ -321,8 +343,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         role: domain.UserRole.student,
         schoolCode: schoolCode,
         schoolName: schoolName,
-        classNum: classNum,
-        studentNum: studentNum,
+        grade: formattedGrade,
+        classNum: formattedClassNum,
+        studentNum: formattedStudentNum,
         studentId: studentId,
         gender: gender,
       );
@@ -379,31 +402,33 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }) async {
     try {
       debugPrint('학생 로그인 시도: 학교=$schoolName, 학번=$studentId');
-      
+
       // 학교 이름 트림 처리
       final trimmedSchoolName = schoolName.trim();
       final trimmedStudentId = studentId.trim();
-      
+
       debugPrint('학교 이름 처리: "$trimmedSchoolName", 학번: "$trimmedStudentId"');
-      
+
       // 학교 정보 조회 - Firestore에서 학교 이름으로 학교 코드 확인
       try {
-        final schoolsSnapshot = await _schoolsCollection
-        .where('schoolName', isEqualTo: trimmedSchoolName)
-        .limit(1)
-        .get();
-            
+        final schoolsSnapshot =
+            await _schoolsCollection
+                .where('schoolName', isEqualTo: trimmedSchoolName)
+                .limit(1)
+                .get();
+
         if (schoolsSnapshot.docs.isNotEmpty) {
-        final docData = schoolsSnapshot.docs.first.data() as Map<String, dynamic>;
+          final docData =
+              schoolsSnapshot.docs.first.data() as Map<String, dynamic>;
           final schoolCode = docData['schoolCode'] as String?;
-            debugPrint('학교 정보 찾음: $trimmedSchoolName (code: $schoolCode)');
-          } else {
+          debugPrint('학교 정보 찾음: $trimmedSchoolName (code: $schoolCode)');
+        } else {
           debugPrint('학교 정보를 찾을 수 없음: $trimmedSchoolName');
         }
       } catch (e) {
         debugPrint('학교 정보 조회 오류: $e');
       }
-      
+
       // Cloud Functions를 사용하여 학생 로그인
       debugPrint('Cloud Functions 호출 시작 - studentLogin');
       final result = await _cloudFunctionsService.studentLogin(
@@ -411,7 +436,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         studentId: trimmedStudentId,
         password: password,
       );
-      
+
       debugPrint('학생 로그인 결과: ${result.toString()}');
 
       // 커스텀 토큰으로 로그인
@@ -435,7 +460,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       // 학생 정보 구성
       final studentData = result['studentData'] as Map<String, dynamic>;
       debugPrint('학생 정보: $studentData');
-      
+
       return domain.User(
         id: firebaseUser.uid,
         email: firebaseUser.email ?? '',

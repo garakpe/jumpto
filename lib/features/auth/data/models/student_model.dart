@@ -130,7 +130,7 @@ class StudentModel extends Student {
       'schoolName': schoolName,
       'attendance': attendance,
       'gender': gender,
-      'email': email,
+      'email': email, // 반드시 이메일 포함
       // 업데이트 시에는 updatedAt 사용, 생성 시에는 createdAt 사용
       'updatedAt': FieldValue.serverTimestamp(),
     };
@@ -145,8 +145,11 @@ class StudentModel extends Student {
       map['authUid'] = authUid;
     }
     
-    // 비밀번호는 절대 Firestore에 저장하지 않음 (보안상 위험)
-    // password 필드는 오직 Firebase Auth 계정 생성 시에만 사용하고 저장하지 않음
+    // password가 있는 경우에만 추가 (Cloud Function 트리거를 위해 필요)
+    // 새 구조에서는 Cloud Functions에서 처리 후 자동으로 삭제
+    if (password != null && password!.isNotEmpty) {
+      map['password'] = password;
+    }
 
     return map;
   }

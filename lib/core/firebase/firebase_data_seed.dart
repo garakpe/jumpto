@@ -24,7 +24,7 @@ class FirebaseDataSeed {
       final List<Map<String, dynamic>> schools = [
         {
           'schoolName': '가락고등학교',
-          'schoolCode': '3550',
+          'schoolCode': '3550', // 학교 코드 4자리로 통일
           'address': '서울특별시 송파구 가락로 29',
           'type': '고등학교',
           'region': '서울',
@@ -84,7 +84,7 @@ class FirebaseDataSeed {
     const password = 'teacher123';
     const displayName = '테스트 교사';
     const schoolName = '가락고등학교';
-    const schoolCode = '3550';
+    const schoolCode = '3550'; // 학교 코드 4자리로 통일
 
     try {
       // 이미 존재하는지 확인
@@ -138,10 +138,10 @@ class FirebaseDataSeed {
 
   /// 테스트용 학생 계정 생성
   Future<void> _seedTestStudent() async {
-    const email = 'student1@school.com';
+    const email = 'student1@school1234.com'; // 이메일 형식 통일 (@school+학교코드로 변경)
     const password = 'student123';
     const displayName = '테스트 학생';
-    const schoolCode = 'school1';
+    const schoolCode = '1234'; // 학교 코드 4자리 표준화
     const studentNum = '1';
 
     try {

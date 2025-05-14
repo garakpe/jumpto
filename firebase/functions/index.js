@@ -59,13 +59,15 @@ exports.createStudentAuthAccount = onDocumentCreated(
 
     logger.info(`학생 문서 ID: ${studentDocId} 처리 시작`, { studentDocId });
 
-    // 필수 필드 검증 (email, password는 초기 생성 시점에만 사용)
-    if (!studentData.email || !studentData.password) {
-      logger.error(`학생 ${studentDocId}의 필수 필드(email, password) 누락`, {
-        studentDocId,
-      });
-      // 오류 발생 시 Firestore에 상태 기록 고려 (예: status: 'error', errorMsg: '...')
-      return null;
+    // 필수 필드 검증
+    if (!studentData.email) {
+      logger.warn(`학생 ${studentDocId}의 필수 필드 email 누락, 계속 진행`);
+      return null; // 실패하더라도 계속 진행
+    }
+    
+    if (!studentData.password) {
+      logger.warn(`학생 ${studentDocId}의 필수 필드 password 누락, 계속 진행`);
+      return null; // 실패하더라도 계속 진행
     }
 
     // 이미 Auth 계정이 있는 경우 (authUid 필드가 있는 경우) 처리 중단
@@ -422,8 +424,10 @@ exports.createBulkStudentAccounts = onCall(
         // }
 
         // Firestore에 저장할 데이터 준비
+        // 학교 코드는 뒤 4자리만 사용
+        const shortSchoolCode = schoolCode.length > 4 ? schoolCode.substring(schoolCode.length - 4) : schoolCode;
         const studentDocData = {
-          schoolCode: schoolCode,
+          schoolCode: shortSchoolCode,
           schoolName: schoolName,
           grade: student.grade,
           classNum: student.classNum,
@@ -650,9 +654,11 @@ exports.studentLogin = onCall(
       logger.info(`학교 코드 찾음: ${schoolCode}`, { schoolName, schoolCode });
 
       // 3. 학생 이메일 구성
-      // 이메일 형식: (연도 두자리)(학번)@school(학교코드).com
+      // 이메일 형식: (연도 두자리)(학번)@school(학교코드 뒤 4자리).com
       const currentYear = new Date().getFullYear().toString().slice(-2); // 연도 마지막 2자리
-      const email = `${currentYear}${studentId}@school${schoolCode}.com`;
+      // 학교 코드는 뒤 4자리만 사용
+      const shortSchoolCode = schoolCode.length > 4 ? schoolCode.substring(schoolCode.length - 4) : schoolCode;
+      const email = `${currentYear}${studentId}@school${shortSchoolCode}.com`;
       logger.info(`학생 이메일 구성: ${email}`, {
         studentId,
         schoolCode,
