@@ -49,19 +49,20 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, User>> createStudentAccount({
     required String displayName,
-    required String studentNum,
+    required String grade,       // 학년 추가
     required String classNum,
+    required String studentNum,
     required String gender,
     String? initialPassword,
   }) async {
     try {
       final user = await _remoteDataSource.createStudentAccount(
         displayName: displayName,
-        studentNum: studentNum,
+        grade: grade,         // 학년 전달
         classNum: classNum,
+        studentNum: studentNum,
         gender: gender,
         initialPassword: initialPassword,
-        grade: '',
       );
       return Right(user);
     } catch (e) {

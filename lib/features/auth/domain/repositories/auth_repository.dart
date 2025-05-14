@@ -21,8 +21,9 @@ abstract class AuthRepository {
   /// 학생 계정 생성 (교사에 의해)
   Future<Either<Failure, User>> createStudentAccount({
     required String displayName,
-    required String studentNum,
+    required String grade,       // 학년 추가
     required String classNum,
+    required String studentNum,
     required String gender,
     String? initialPassword,
   });
