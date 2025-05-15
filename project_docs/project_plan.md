@@ -292,6 +292,14 @@
   - AuthRemoteDataSource의 signInStudent 메서드 개선 ✅
   - StudentRemoteDataSourceImpl의 uploadStudents 메서드 개선 ✅
 
+### 최근 완료된 작업 (로그인 시스템 버그 수정)
+
+- AppRouter.dart 파일의 `redirect` 함수 수정
+  - null safety 적용 문제 해결 (`_currentUser!.isAdmin`에서 발생하는 null check operator 오류 수정)
+  - `isLoggedIn` 변수를 사용하여 안전하게 사용자 객체 속성에 접근하도록 수정
+  - 관리자 경로, 학생 마이페이지, 학생 업로드 페이지 등 모든 권한 체크 부분에 null safety 적용
+  - 실제 코드의 잠재적인 null 참조 오류 가능성 제거
+
 ### 다음 예정 작업
 
 - Cloud Functions 배포 및 테스트

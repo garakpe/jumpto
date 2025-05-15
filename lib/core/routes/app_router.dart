@@ -55,11 +55,15 @@ class AppRouter {
           return null;
         }
         
+        // 인증 상태 확인
+        final bool isLoggedIn = _currentUser != null;
+        
         // 관리자 경로인 경우 일반 인증 여부 검사 제외
         if (_isAdminPath(state.fullPath!)) {
           // 관리자 대시보드로 가는 경우 로그인 여부 확인
           if (state.fullPath == '/admin/dashboard') {
-            if (_currentUser == null || !_currentUser!.isAdmin) {
+            // 로그인 여부와 관리자 권한 확인 (null-safety 적용)
+            if (!isLoggedIn || !_currentUser!.isAdmin) {
               print('관리자 권한 부족: $_currentUser');
               return '/admin/login';
             } else {
@@ -70,7 +74,6 @@ class AppRouter {
         }
         
         // 인증 여부에 따른 리디렉션
-        final bool isLoggedIn = _currentUser != null;
         final bool isGoingToAuth = state.fullPath == '/login' || state.fullPath == '/register';
         
         // 로그인하지 않은 경우 로그인 화면으로 리디렉션
@@ -83,7 +86,7 @@ class AppRouter {
           return '/content-selection';
         }
         
-        // 교사 승인 여부 확인
+        // 교사 승인 여부 확인 (null-safety 적용)
         if (isLoggedIn && _currentUser!.isTeacher && !_currentUser!.isApproved) {
           // 승인 대기 화면으로 리디렉션 (승인 대기 화면은 접근 가능)
           if (state.fullPath != '/waiting-approval') {
@@ -91,12 +94,12 @@ class AppRouter {
           }
         }
         
-        // 학생 업로드 페이지는 교사만 접근 가능
+        // 학생 업로드 페이지는 교사만 접근 가능 (null-safety 적용)
         if (isLoggedIn && state.fullPath == '/student-upload' && !_currentUser!.isTeacher) {
           return '/content-selection';
         }
         
-        // 학생 마이페이지는 학생만 접근 가능
+        // 학생 마이페이지는 학생만 접근 가능 (null-safety 적용)
         if (isLoggedIn && state.fullPath == '/student-mypage' && !_currentUser!.isStudent) {
           return '/content-selection';
         }
