@@ -26,7 +26,7 @@ class CloudFunctionsService {
       final callable = _functions.httpsCallable('resetStudentPassword');
       final result = await callable.call({
         'studentId': studentId, 
-        'newPassword': newPassword
+        'newPassword': newPassword, // 실제 호출에는 원래 비밀번호 사용
       });
 
       if (result.data['success'] != true) {
@@ -67,12 +67,15 @@ class CloudFunctionsService {
               })
           .toList();
 
+      debugPrint('학생 계정 일괄 생성 - ${students.length}개 계정, 학교: $schoolName');
+      // 민감한 초기 비밀번호는 로깅하지 않음
+
       final callable = _functions.httpsCallable('createBulkStudentAccounts');
       final result = await callable.call({
         'students': studentsList,
         'schoolCode': schoolCode,
         'schoolName': schoolName,
-        'initialPassword': initialPassword,
+        'initialPassword': initialPassword, // 실제 호출에서는 원래 비밀번호 사용
       });
 
       if (result.data['success'] != true) {
@@ -102,27 +105,30 @@ class CloudFunctionsService {
     required String password,
   }) async {
     try {
-      // 디버그 로그 추가
+      // 디버그 로그 - 민감 정보 제외
       debugPrint('학생 로그인 시도 - 학교: $schoolName, 학번: $studentId');
-      // region은 객체에서 직접 접근할 수 없음
       debugPrint('Cloud Function 리전: asia-northeast3');
       
       // Firebase SDK의 httpsCallable을 사용하여 함수 호출
       final callable = _functions.httpsCallable('studentLogin');
       debugPrint('함수 호출 준비 완료: studentLogin');
       
-      // 파라미터 로그
-      final params = {
+      // 파라미터 로그 - 비밀번호는 마스킹
+      debugPrint('전송할 파라미터: {schoolName: $schoolName, studentId: $studentId, password: ******}');
+      
+      // 함수 호출 - 실제 요청에는 원래 비밀번호 포함
+      final result = await callable.call({
         'schoolName': schoolName,
         'studentId': studentId,
         'password': password,
-      };
-      debugPrint('전송할 파라미터: $params');
-      
-      // 함수 호출
-      final result = await callable.call(params);
+      });
 
-      debugPrint('학생 로그인 결과: ${result.data}');
+      // 결과 로그 - 토큰과 같은 민감 정보는 마스킹
+      final Map<String, dynamic> safeResult = Map<String, dynamic>.from(result.data);
+      if (safeResult.containsKey('customToken')) {
+        safeResult['customToken'] = '********';
+      }
+      debugPrint('학생 로그인 결과: $safeResult');
 
       // 결과 데이터 반환
       if (result.data is Map && result.data['success'] != true) {
@@ -146,6 +152,10 @@ class CloudFunctionsService {
         errorMessage = '학교 정보를 찾을 수 없습니다. 학교명을 확인해주세요.';
       } else if (e.code == 'permission-denied') {
         errorMessage = '로그인 권한이 없습니다. 계정 정보를 확인해주세요.';
+      } else if (e.code == 'invalid-argument') {
+        errorMessage = '입력한 정보가 올바르지 않습니다. 다시 확인해주세요.';
+      } else if (e.code == 'unauthenticated') {
+        errorMessage = '비밀번호가 일치하지 않습니다.';
       }
       
       throw ServerException(message: errorMessage);
