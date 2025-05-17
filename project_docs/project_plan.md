@@ -292,13 +292,13 @@
   - AuthRemoteDataSource의 signInStudent 메서드 개선 ✅
   - StudentRemoteDataSourceImpl의 uploadStudents 메서드 개선 ✅
 
-### 최근 완료된 작업 (로그인 시스템 버그 수정)
+### 최근 완료된 작업 (로그인 시스템 버그 수정) ✅
 
-- AppRouter.dart 파일의 `redirect` 함수 수정
-  - null safety 적용 문제 해결 (`_currentUser!.isAdmin`에서 발생하는 null check operator 오류 수정)
-  - `isLoggedIn` 변수를 사용하여 안전하게 사용자 객체 속성에 접근하도록 수정
-  - 관리자 경로, 학생 마이페이지, 학생 업로드 페이지 등 모든 권한 체크 부분에 null safety 적용
-  - 실제 코드의 잠재적인 null 참조 오류 가능성 제거
+- AppRouter.dart 파일의 `redirect` 함수 수정 ✅
+  - null safety 적용 문제 해결 (`_currentUser!.isAdmin`에서 발생하는 null check operator 오류 수정) ✅
+  - `isLoggedIn` 변수를 사용하여 안전하게 사용자 객체 속성에 접근하도록 수정 ✅
+  - 관리자 경로, 학생 마이페이지, 학생 업로드 페이지 등 모든 권한 체크 부분에 null safety 적용 ✅
+  - 실제 코드의 잠재적인 null 참조 오류 가능성 제거 ✅
 
 ### 다음 예정 작업
 
@@ -342,6 +342,7 @@
 - sign_in_student.dart와 auth_repository.dart 간의 메서드 파라미터 불일치 문제 (studentNum vs studentId) ✅
 - 학생 로그인 시 HTTP 직접 호출로 인한 CORS 이슈 발생 ✅
 - Cloud Functions에서 "해당 학교 정보를 찾을 수 없습니다." 에러 발생 ✅
+- 로그아웃 후 null check operator 에러 발생 문제 ✅
 
 ### 새로 추가된 내용
 
@@ -408,6 +409,10 @@
   - 학생 이메일 형식 통일 (학교 코드 마지막 4자리만 사용) ✅
   - 모든 Cloud Functions 호출을 httpsCallable로 통일 ✅
   - 적절한 에러 처리 및 로깅 추가 ✅
+- 라우터 null safety 적용 ✅
+  - AppRouter의 redirect 함수에서 null 체크 강화 ✅
+  - _currentUser 객체 접근 전 isLoggedIn 확인 추가 ✅
+  - 모든 사용자 속성 접근 시 null 체크 로직 적용 ✅
 
 ### 테스트 계정 정보
 
@@ -556,3 +561,4 @@
 - **사용성 개선**: 사용자 피드백을 반영한 UI/UX 개선
 - **코드 최적화**: 빌드 크기 감소 및 성능 최적화
 - **테스트 자동화**: CI/CD 파이프라인 구축
+- **라우팅 안정성 개선**: 로그인/로그아웃 시 예외 처리 강화 및 사용자 경험 개선

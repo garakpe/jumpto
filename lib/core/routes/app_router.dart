@@ -20,126 +20,154 @@ import '../../features/paps/presentation/pages/teacher_event_selection_page.dart
 import '../../features/teacher_dashboard/presentation/pages/teacher_dashboard_page.dart';
 
 class AppRouter {
-  static final _rootNavigatorKey = GlobalKey<NavigatorState>();
+  // 안전한 사용자 정보 상태 관리를 위한 클래스 변수
   static User? _currentUser;
+  static GoRouter? _router;
 
+  // 사용자 컨텍스트를 설정하는 메서드
   static void setCurrentUser(User? user) {
-    // User 클래스에 displayName, id, isAdmin 속성이 실제 존재하는지 확인 필요
-    final prevUserDesc =
-        _currentUser == null
-            ? "null"
-            : "User{id: ${_currentUser?.id}, displayName: ${_currentUser?.displayName}, isAdmin: ${_currentUser?.isAdmin}}";
-    print('이전 사용자: $prevUserDesc');
+    try {
+      // 이전 사용자 정보 로깅 (문제 발생 가능 부분)
+      final prevUserDesc = _currentUser == null 
+          ? "null" 
+          : "User{id: ${_currentUser?.id}, displayName: ${_currentUser?.displayName}, isAdmin: ${_currentUser?.isAdmin}}";
+      debugPrint('이전 사용자: $prevUserDesc');
 
-    _currentUser = user;
+      // 새 사용자 할당 전에 이전 참조 완전히 삭제
+      _currentUser = null;
+      
+      // 새 사용자 정보 할당
+      _currentUser = user;
 
-    final newUserDesc =
-        user == null
-            ? "null, null, isAdmin: null"
-            : "User{id: ${user.id}, displayName: ${user.displayName}, isAdmin: ${user.isAdmin}}";
-    print('새 사용자 설정: $newUserDesc');
+      // 새 사용자 정보 로깅
+      final newUserDesc = user == null 
+          ? "null, null, isAdmin: null" 
+          : "User{id: ${user.id}, displayName: ${user.displayName}, isAdmin: ${user.isAdmin}}";
+      debugPrint('새 사용자 설정: $newUserDesc');
 
-    _router?.refresh();
+      // 로그아웃인 경우 라우터 새로고침 전에 약간의 지연
+      if (user == null) {
+        Future.delayed(const Duration(milliseconds: 50), () {
+          _router?.refresh();
+        });
+      } else {
+        _router?.refresh();
+      }
+    } catch (e) {
+      debugPrint('사용자 설정 중 오류 발생: $e');
+    }
   }
 
+  // 관리자 경로인지 확인하는 헬퍼 메서드
   static bool _isAdminPath(String? path) {
     return path?.startsWith('/admin') ?? false;
   }
 
-  static GoRouter? _router;
-
+  // 라우터 인스턴스 게터
   static GoRouter get router {
+    // 라우터가 아직 초기화되지 않은 경우에만 생성
     _router ??= GoRouter(
-      navigatorKey: _rootNavigatorKey,
+      navigatorKey: GlobalKey<NavigatorState>(),
       initialLocation: '/splash',
       debugLogDiagnostics: true,
+      
+      // 리디렉션 로직
       redirect: (BuildContext context, GoRouterState state) {
-        final String? currentPath = state.fullPath;
-        final String currentRouteName =
-            state.name ??
-            state.path ??
-            'unknown ($currentPath)'; // 경로가 null일 경우 대비
-        final User? user = _currentUser;
-        final bool isLoggedIn = user != null;
+        try {
+          // 현재 경로 정보 (널 안전하게 처리)
+          final String currentPath = state.fullPath ?? '/login';
+          final String currentRouteName = state.name ?? state.path ?? 'unknown ($currentPath)';
+          
+          // 로그인 상태 확인 (널 안전)
+          final bool isLoggedIn = _currentUser != null;
+          
+          // 사용자 정보 (널 안전)
+          final String userProps = isLoggedIn 
+              ? "id:${_currentUser!.id},role:${_currentUser!.role},approved:${_currentUser!.isApproved}"
+              : "null";
+          
+          debugPrint('Router redirect: currentPath=$currentPath, currentRouteName=$currentRouteName, isLoggedIn=$isLoggedIn, userProps=$userProps');
 
-        print(
-          'Router redirect: currentPath=$currentPath, currentRouteName=$currentRouteName, isLoggedIn=$isLoggedIn, userProps=${user == null ? "null" : "id:${user.id},role:${user.role},approved:${user.isApproved}"}',
-        );
+          // 1. 스플래시 화면 예외 처리
+          if (currentPath == '/splash') {
+            debugPrint('리디렉션: Splash 화면 -> 조건 없음, 현재 경로 유지.');
+            return null;
+          }
 
-        if (currentPath == '/splash') {
-          print('리디렉션: Splash 화면 -> 조건 없음, 현재 경로 유지.');
-          return null;
-        }
+          // 2. 관리자 경로 처리
+          if (_isAdminPath(currentPath)) {
+            if (currentPath == '/admin/dashboard') {
+              if (isLoggedIn && _currentUser!.isAdmin) {
+                // 관리자로 로그인한 경우 대시보드 접근 허용
+                debugPrint('리디렉션: 관리자 대시보드 -> 접근 허용');
+                return null;
+              } else {
+                // 관리자가 아니거나 로그인하지 않은 경우 로그인 페이지로 이동
+                debugPrint('리디렉션: 관리자 대시보드 -> 관리자 로그인으로 이동');
+                return '/admin/login';
+              }
+            }
+            // 기타 관리자 경로는 그대로 유지
+            debugPrint('리디렉션: 기타 관리자 경로 -> 조건 없음, 현재 경로 유지');
+            return null;
+          }
 
-        // 관리자 경로 처리
-        if (_isAdminPath(currentPath)) {
-          if (currentPath == '/admin/dashboard') {
-            if (isLoggedIn && user.isAdmin) {
-              // User 클래스에 'isAdmin' bool getter 필요
-              print('리디렉션: 관리자 대시보드 -> 접근 허용 (${user.displayName}).');
-              return null;
+          // 3. 인증 화면 여부 확인 (로그인, 회원가입)
+          final bool isGoingToAuth = currentPath == '/login' || currentPath == '/register';
+
+          // 4. 로그아웃 상태일 때
+          if (!isLoggedIn) {
+            if (!isGoingToAuth) {
+              // 인증 화면이 아닌 곳으로 가려고 할 때 로그인 페이지로 이동
+              debugPrint('리디렉션: 로그아웃 상태 & 인증 화면 아님 -> 로그인 페이지로 이동');
+              return '/login';
             } else {
-              print(
-                '리디렉션: 관리자 대시보드 -> 권한 부족/로그인 안됨. 관리자 로그인으로 이동. User: $user',
-              );
-              return '/admin/login';
+              // 인증 화면으로 가려고 할 때는 그대로 유지
+              debugPrint('리디렉션: 로그아웃 상태 & 인증 화면 -> 조건 없음, 현재 경로 유지');
+              return null;
             }
           }
-          print('리디렉션: 기타 관리자 경로 ($currentPath) -> 조건 없음, 현재 경로 유지.');
+
+          // 5. 로그인 상태일 때
+          
+          // 인증 화면으로 가려고 할 때 콘텐츠 선택 페이지로 이동
+          if (isGoingToAuth) {
+            debugPrint('리디렉션: 로그인 상태 & 인증 화면 -> 콘텐츠 선택 페이지로 이동');
+            return '/content-selection';
+          }
+
+          // 교사 승인 대기 상태 처리
+          if (_currentUser!.isTeacher && !_currentUser!.isApproved) {
+            if (currentPath != '/waiting-approval') {
+              debugPrint('리디렉션: 교사 승인 대기 중 -> 승인 대기 페이지로 이동');
+              return '/waiting-approval';
+            }
+          }
+
+          // 권한 체크 - 학생 업로드 페이지
+          if (currentPath == '/student-upload' && !_currentUser!.isTeacher) {
+            debugPrint('리디렉션: 학생 업로드 -> 교사 권한 필요, 콘텐츠 선택 페이지로 이동');
+            return '/content-selection';
+          }
+
+          // 권한 체크 - 학생 마이페이지
+          if (currentPath == '/student-mypage' && !_currentUser!.isStudent) {
+            debugPrint('리디렉션: 학생 마이페이지 -> 학생 권한 필요, 콘텐츠 선택 페이지로 이동');
+            return '/content-selection';
+          }
+
+          // 조건에 맞지 않으면 현재 경로 유지
+          debugPrint('리디렉션: 모든 조건 불일치 -> 조건 없음, 현재 경로 유지');
           return null;
+          
+        } catch (e) {
+          // 리디렉션 중 오류 발생 시 로그인 페이지로 이동 (안전 장치)
+          debugPrint('리디렉션 중 오류 발생: $e');
+          return '/login';
         }
-
-        // 일반 사용자 경로 처리
-        final bool isGoingToAuth =
-            currentPath == '/login' || currentPath == '/register';
-
-        if (!isLoggedIn) {
-          // 로그아웃 상태
-          if (!isGoingToAuth) {
-            print('리디렉션: 로그아웃 상태 & 인증 화면 아님 ($currentPath) -> 로그인 페이지로 이동.');
-            return '/login';
-          } else {
-            // 로그아웃 상태 & 인증 화면으로 가는 중 (예: /login, /register)
-            print(
-              '리디렉션: 로그아웃 상태 & 인증 화면으로 이동 중 ($currentPath) -> 조건 없음, 현재 경로 유지.',
-            );
-            return null; // 현재 경로(로그인 또는 회원가입) 유지
-          }
-        }
-
-        // --- 이하 isLoggedIn 이 true 인 (로그인한) 경우 ---
-        final loggedInUser = user; // 이제 loggedInUser는 non-nullable
-
-        if (isGoingToAuth) {
-          print(
-            '리디렉션: 로그인 상태 & 인증 화면으로 이동 시도 ($currentPath) -> 콘텐츠 선택 페이지로 이동.',
-          );
-          return '/content-selection';
-        }
-
-        // User 클래스에 isTeacher (bool), isApproved (bool), isStudent (bool) getter/속성 필요
-        if (loggedInUser.isTeacher && !loggedInUser.isApproved) {
-          if (currentPath != '/waiting-approval') {
-            print(
-              '리디렉션: 교사 승인 대기 중 (${loggedInUser.displayName}) -> 승인 대기 페이지로 이동.',
-            );
-            return '/waiting-approval';
-          }
-        }
-
-        if (currentPath == '/student-upload' && !loggedInUser.isTeacher) {
-          print('리디렉션: 학생 업로드 ($currentPath) -> 교사 권한 필요. 콘텐츠 선택 페이지로 이동.');
-          return '/content-selection';
-        }
-
-        if (currentPath == '/student-mypage' && !loggedInUser.isStudent) {
-          print('리디렉션: 학생 마이페이지 ($currentPath) -> 학생 권한 필요. 콘텐츠 선택 페이지로 이동.');
-          return '/content-selection';
-        }
-
-        print('리디렉션: 모든 조건 불일치 ($currentPath) -> 조건 없음, 현재 경로 유지.');
-        return null;
       },
+      
+      // 라우트 정의
       routes: [
         GoRoute(
           path: '/content-selection',
@@ -213,6 +241,7 @@ class AppRouter {
         ),
       ],
     );
+    
     return _router!;
   }
 }

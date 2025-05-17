@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/error/failures.dart';
@@ -71,61 +72,109 @@ class AuthCubit extends Cubit<AuthState> {
        _signInStudent = signInStudent,
        _signOut = signOut,
        super(AuthInitial()) {
-    checkAuthState();
+    _initAuthState();
+  }
+  
+  /// 초기 인증 상태 설정
+  Future<void> _initAuthState() async {
+    try {
+      debugPrint('초기 인증 상태 확인 중...');
+      emit(AuthLoading());
+      await Future.delayed(const Duration(milliseconds: 200));
+      emit(AuthUnauthenticated());
+      // 약간의 지연 후 실제 인증 상태 확인
+      Timer(const Duration(milliseconds: 300), () => checkAuthState());
+    } catch (e) {
+      debugPrint('초기 인증 상태 설정 오류: $e');
+      emit(AuthUnauthenticated());
+    }
   }
 
   /// 현재 인증 상태 확인
   Future<void> checkAuthState() async {
-    emit(AuthLoading());
+    try {
+      emit(AuthLoading());
 
-    final result = await _getCurrentUser(NoParams());
+      final result = await _getCurrentUser(NoParams());
 
-    result.fold(
-      (failure) {
-        emit(AuthError(_mapFailureToMessage(failure)));
-        emit(AuthUnauthenticated());
-      },
-      (user) {
-        if (user != null) {
-          AppRouter.setCurrentUser(user);
-          emit(AuthAuthenticated(user));
-        } else {
+      result.fold(
+        (failure) {
+          debugPrint('인증 상태 확인 중 실패: ${failure.message}');
+          emit(AuthError(_mapFailureToMessage(failure)));
           emit(AuthUnauthenticated());
-        }
-      },
-    );
+        },
+        (user) {
+          if (user != null) {
+            debugPrint('인증된 사용자: ${user.displayName}');
+            
+            // 로그아웃 직후에 호출되는 경우 등 특별 처리 
+            if (state is AuthUnauthenticated) {
+              Future.delayed(const Duration(milliseconds: 100), () {
+                AppRouter.setCurrentUser(user);
+                emit(AuthAuthenticated(user));
+              });
+            } else {
+              AppRouter.setCurrentUser(user);
+              emit(AuthAuthenticated(user));
+            }
+          } else {
+            debugPrint('인증되지 않은 상태');
+            AppRouter.setCurrentUser(null);
+            emit(AuthUnauthenticated());
+          }
+        },
+      );
+    } catch (e) {
+      debugPrint('인증 상태 확인 중 예외 발생: $e');
+      emit(AuthError('인증 상태 확인 중 오류가 발생했습니다.'));
+      emit(AuthUnauthenticated());
+    }
   }
 
   /// 현재 사용자 정보 재로드
   Future<void> checkCurrentUser() async {
-    // 현재 상태가 인증됨이 아닌 경우 실행하지 않음
-    if (state is! AuthAuthenticated) {
-      return;
+    try {
+      // 현재 상태가 인증됨이 아닌 경우 실행하지 않음
+      if (state is! AuthAuthenticated) {
+        return;
+      }
+
+      emit(AuthLoading());
+
+      final result = await _getCurrentUser(NoParams());
+
+      result.fold(
+        (failure) {
+          debugPrint('사용자 정보 재로드 중 실패: ${failure.message}');
+          emit(AuthError(_mapFailureToMessage(failure)));
+          // 상태 유지
+          if (state is AuthAuthenticated) {
+            emit(AuthAuthenticated((state as AuthAuthenticated).user));
+          } else {
+            emit(AuthUnauthenticated());
+          }
+        },
+        (user) {
+          if (user != null) {
+            debugPrint('사용자 정보 재로드 성공: ${user.displayName}');
+            AppRouter.setCurrentUser(user);
+            emit(AuthAuthenticated(user));
+          } else {
+            debugPrint('사용자 정보가 없음');
+            AppRouter.setCurrentUser(null);
+            emit(AuthUnauthenticated());
+          }
+        },
+      );
+    } catch (e) {
+      debugPrint('사용자 정보 재로드 중 예외 발생: $e');
+      emit(AuthError('사용자 정보 재로드 중 오류가 발생했습니다.'));
+      if (state is AuthAuthenticated) {
+        emit(AuthAuthenticated((state as AuthAuthenticated).user));
+      } else {
+        emit(AuthUnauthenticated());
+      }
     }
-
-    emit(AuthLoading());
-
-    final result = await _getCurrentUser(NoParams());
-
-    result.fold(
-      (failure) {
-        emit(AuthError(_mapFailureToMessage(failure)));
-        // 상태 유지
-        if (state is AuthAuthenticated) {
-          emit(AuthAuthenticated((state as AuthAuthenticated).user));
-        } else {
-          emit(AuthUnauthenticated());
-        }
-      },
-      (user) {
-        if (user != null) {
-          AppRouter.setCurrentUser(user);
-          emit(AuthAuthenticated(user));
-        } else {
-          emit(AuthUnauthenticated());
-        }
-      },
-    );
   }
 
   /// 이메일/비밀번호로 로그인
@@ -133,22 +182,30 @@ class AuthCubit extends Cubit<AuthState> {
     required String email,
     required String password,
   }) async {
-    emit(AuthLoading());
+    try {
+      emit(AuthLoading());
 
-    final result = await _signInWithEmailPassword(
-      SignInParams(email: email, password: password),
-    );
+      final result = await _signInWithEmailPassword(
+        SignInParams(email: email, password: password),
+      );
 
-    result.fold(
-      (failure) {
-        emit(AuthError(_mapFailureToMessage(failure)));
-        emit(AuthUnauthenticated());
-      },
-      (user) {
-        AppRouter.setCurrentUser(user);
-        emit(AuthAuthenticated(user));
-      },
-    );
+      result.fold(
+        (failure) {
+          debugPrint('이메일 로그인 실패: ${failure.message}');
+          emit(AuthError(_mapFailureToMessage(failure)));
+          emit(AuthUnauthenticated());
+        },
+        (user) {
+          debugPrint('이메일 로그인 성공: ${user.displayName}');
+          AppRouter.setCurrentUser(user);
+          emit(AuthAuthenticated(user));
+        },
+      );
+    } catch (e) {
+      debugPrint('이메일 로그인 중 예외 발생: $e');
+      emit(AuthError('로그인 중 오류가 발생했습니다.'));
+      emit(AuthUnauthenticated());
+    }
   }
 
   /// 교사 회원가입
@@ -160,29 +217,37 @@ class AuthCubit extends Cubit<AuthState> {
     String? schoolName,
     String? phoneNumber,
   }) async {
-    emit(AuthLoading());
+    try {
+      emit(AuthLoading());
 
-    final result = await _registerTeacher(
-      RegisterTeacherParams(
-        email: email,
-        password: password,
-        displayName: displayName,
-        schoolCode: schoolCode,
-        schoolName: schoolName,
-        phoneNumber: phoneNumber,
-      ),
-    );
+      final result = await _registerTeacher(
+        RegisterTeacherParams(
+          email: email,
+          password: password,
+          displayName: displayName,
+          schoolCode: schoolCode,
+          schoolName: schoolName,
+          phoneNumber: phoneNumber,
+        ),
+      );
 
-    result.fold(
-      (failure) {
-        emit(AuthError(_mapFailureToMessage(failure)));
-        emit(AuthUnauthenticated());
-      },
-      (user) {
-        AppRouter.setCurrentUser(user);
-        emit(AuthAuthenticated(user));
-      },
-    );
+      result.fold(
+        (failure) {
+          debugPrint('교사 회원가입 실패: ${failure.message}');
+          emit(AuthError(_mapFailureToMessage(failure)));
+          emit(AuthUnauthenticated());
+        },
+        (user) {
+          debugPrint('교사 회원가입 성공: ${user.displayName}');
+          AppRouter.setCurrentUser(user);
+          emit(AuthAuthenticated(user));
+        },
+      );
+    } catch (e) {
+      debugPrint('교사 회원가입 중 예외 발생: $e');
+      emit(AuthError('회원가입 중 오류가 발생했습니다.'));
+      emit(AuthUnauthenticated());
+    }
   }
 
   /// 학생 로그인
@@ -191,43 +256,84 @@ class AuthCubit extends Cubit<AuthState> {
     required String studentId,
     required String password,
   }) async {
-    emit(AuthLoading());
+    try {
+      emit(AuthLoading());
 
-    final result = await _signInStudent(
-      SignInStudentParams(
-        schoolName: schoolName,
-        studentId: studentId,
-        password: password,
-      ),
-    );
+      final result = await _signInStudent(
+        SignInStudentParams(
+          schoolName: schoolName,
+          studentId: studentId,
+          password: password,
+        ),
+      );
 
-    result.fold(
-      (failure) {
-        emit(AuthError(_mapFailureToMessage(failure)));
-        emit(AuthUnauthenticated());
-      },
-      (user) {
-        AppRouter.setCurrentUser(user);
-        emit(AuthAuthenticated(user));
-      },
-    );
+      result.fold(
+        (failure) {
+          debugPrint('학생 로그인 실패: ${failure.message}');
+          emit(AuthError(_mapFailureToMessage(failure)));
+          emit(AuthUnauthenticated());
+        },
+        (user) {
+          debugPrint('학생 로그인 성공: ${user.displayName}');
+          AppRouter.setCurrentUser(user);
+          emit(AuthAuthenticated(user));
+        },
+      );
+    } catch (e) {
+      debugPrint('학생 로그인 중 예외 발생: $e');
+      emit(AuthError('로그인 중 오류가 발생했습니다.'));
+      emit(AuthUnauthenticated());
+    }
   }
 
-  /// 로그아웃
+  /// 로그아웃 - 완전히 새로 구현
   Future<void> signOut() async {
-    emit(AuthLoading());
-
-    final result = await _signOut(NoParams());
-
-    result.fold(
-      (failure) {
-        emit(AuthError(_mapFailureToMessage(failure)));
-      },
-      (_) {
-        AppRouter.setCurrentUser(null);
-        emit(AuthUnauthenticated());
-      },
-    );
+    try {
+      debugPrint('로그아웃 시작');
+      
+      // 1. 먼저 명시적으로 AuthLoading 상태 전환
+      emit(AuthLoading());
+      
+      // 2. AppRouter의 사용자 정보를 삭제하기 전에 현재 사용자의 복사본 저장
+      final currentUserCopy = _currentUser;
+      
+      // 3. AppRouter의 사용자 정보 삭제 - 이후 리디렉션이 발생함
+      AppRouter.setCurrentUser(null);
+      
+      // 4. 상태를 미인증 상태로 설정 - UI가 재구성됨
+      emit(AuthUnauthenticated());
+      
+      // 5. 지연 시간 후 Firebase에서 실제 로그아웃 - 비동기 작업 
+      await Future.delayed(const Duration(milliseconds: 300));
+      
+      // 6. 실제 Firebase 로그아웃 수행
+      final result = await _signOut(NoParams());
+      
+      // 7. 완료 처리
+      result.fold(
+        (failure) {
+          debugPrint('Firebase 로그아웃 실패: ${failure.message}');
+          // (이미 UI는 로그아웃 상태로 변경되었으므로 사용자에게 오류를 표시하지 않음)
+        },
+        (_) {
+          debugPrint('로그아웃 성공');
+          // 이미 AuthUnauthenticated 상태로 변경됨
+        },
+      );
+      
+    } catch (e) {
+      debugPrint('로그아웃 중 예외 발생: $e');
+      // 오류가 발생해도 사용자 UI는 이미 로그아웃 상태로 변경됨
+      emit(AuthUnauthenticated());
+    }
+  }
+  
+  /// _currentUser 체크를 위한 getter (유닛 테스트 및 안전 로직용)
+  User? get _currentUser {
+    if (state is AuthAuthenticated) {
+      return (state as AuthAuthenticated).user;
+    }
+    return null;
   }
 
   @override

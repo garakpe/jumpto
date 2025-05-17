@@ -16,35 +16,61 @@ class ContentSelectionPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('콘텐츠 선택'),
-        actions: [
-          BlocBuilder<AuthCubit, AuthState>(
-            builder: (context, state) {
-              if (state is AuthAuthenticated) {
-                // 계정 드롭다운 메뉴
-                return AccountDropdown(user: state.user);
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-        ],
-      ),
-      body: BlocBuilder<AuthCubit, AuthState>(
-        builder: (context, state) {
-          if (state is AuthLoading) {
-            return const LoadingView();
-          }
-          
-          if (state is AuthAuthenticated) {
-            return _buildContent(context, state.user);
-          }
-          
-          // 인증되지 않은 경우 로그인 화면으로 리디렉션
-          Future.microtask(() => context.go('/login'));
-          return const SizedBox.shrink();
-        },
+    return BlocListener<AuthCubit, AuthState>(
+      // 리스너로 상태 전환을 추적
+      listener: (context, state) {
+        // 로그아웃 처리
+        if (state is AuthUnauthenticated) {
+          // setState를 사용하는 대신 microtask로 라우팅
+          Future.microtask(() {
+            try {
+              context.go('/login');
+            } catch (e) {
+              debugPrint('라우팅 에러: $e');
+            }
+          });
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('콘텐츠 선택'),
+          actions: [
+            BlocBuilder<AuthCubit, AuthState>(
+              builder: (context, state) {
+                // 인증 상태일 때만 계정 드롭다운 표시
+                if (state is AuthAuthenticated && state.user != null) {
+                  return AccountDropdown(user: state.user);
+                }
+                // 인증 상태가 아니면 빈 위젯 반환
+                return const SizedBox.shrink();
+              },
+            ),
+          ],
+        ),
+        body: BlocBuilder<AuthCubit, AuthState>(
+          builder: (context, state) {
+            // 상태별 분기 처리
+            if (state is AuthLoading) {
+              return const LoadingView(message: '로딩 중...');
+            }
+            
+            if (state is AuthAuthenticated && state.user != null) {
+              return _buildContent(context, state.user);
+            }
+            
+            // 인증되지 않은 경우 임시 화면
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('로그인 화면으로 이동 중...'),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -88,9 +114,21 @@ class ContentSelectionPage extends StatelessWidget {
                 onTap: () {
                   // 교사인 경우 교사 대시보드로, 학생인 경우 홈 화면으로 이동
                   if (user.isTeacher) {
-                    context.go('/teacher-dashboard');
+                    try {
+                      context.go('/teacher-dashboard');
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('화면 이동 중 오류가 발생했습니다: $e')),
+                      );
+                    }
                   } else {
-                    context.go('/home');
+                    try {
+                      context.go('/home');
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('화면 이동 중 오류가 발생했습니다: $e')),
+                      );
+                    }
                   }
                 },
               ),
@@ -153,7 +191,13 @@ class ContentSelectionPage extends StatelessWidget {
                 icon: const Icon(Icons.upload_file),
                 label: const Text('학생 명단 업로드'),
                 onPressed: () {
-                  context.go('/student-upload');
+                  try {
+                    context.go('/student-upload');
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('화면 이동 중 오류가 발생했습니다: $e')),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.white,

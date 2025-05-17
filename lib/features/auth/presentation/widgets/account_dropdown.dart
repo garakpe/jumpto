@@ -16,6 +16,11 @@ class AccountDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 사용자 객체가 없으면 빈 위젯 반환
+    if (user == null) {
+      return const SizedBox.shrink();
+    }
+    
     return PopupMenuButton<String>(
       icon: const Icon(Icons.account_circle),
       tooltip: '계정 메뉴',
@@ -50,23 +55,82 @@ class AccountDropdown extends StatelessWidget {
   
   // 메뉴 항목 선택 처리
   void _handleMenuItemSelected(BuildContext context, String value) {
-    switch (value) {
-      case 'mypage':
-        if (user.isStudent) {
-          // 학생 마이페이지로 이동
-          context.go('/student-mypage');
-        } else if (user.isTeacher) {
-          // 교사 마이페이지로 이동 (미구현)
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('교사 마이페이지는 아직 준비 중입니다.')),
-          );
-        }
-        break;
+    // 안전하게 메뉴 처리
+    try {
+      // 사용자 객체 유효성 다시 확인
+      if (user == null) {
+        return;
+      }
       
-      case 'logout':
-        // 로그아웃
-        context.read<AuthCubit>().signOut();
-        break;
+      switch (value) {
+        case 'mypage':
+          // 학생/교사에 따른 마이페이지 분기
+          if (user.isStudent) {
+            // 학생 마이페이지로 이동
+            context.go('/student-mypage');
+          } else if (user.isTeacher) {
+            // 교사 마이페이지로 이동 (미구현)
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('교사 마이페이지는 아직 준비 중입니다.')),
+            );
+          }
+          break;
+        
+        case 'logout':
+          // 로그아웃 전 확인 다이얼로그
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('로그아웃'),
+                content: const Text('정말 로그아웃 하시겠습니까?'),
+                actions: <Widget>[
+                  TextButton(
+                    child: const Text('취소'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                  TextButton(
+                    child: const Text('확인'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      // 로그아웃 쿼리
+                      _performLogout(context);
+                    },
+                  ),
+                ],
+              );
+            },
+          );
+          break;
+      }
+    } catch (e) {
+      debugPrint('메뉴 항목 처리 중 오류: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('작업 처리 중 오류가 발생했습니다: $e')),
+      );
+    }
+  }
+  
+  // 실제 로그아웃 수행 함수
+  Future<void> _performLogout(BuildContext context) async {
+    try {
+      // UI에 로딩 상태 표시
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('로그아웃 중...')),
+      );
+      
+      // 로그아웃 로직 호출
+      await context.read<AuthCubit>().signOut();
+      
+      // 로그아웃 성공 알림은 필요 없음 (이미 로그인 화면으로 이동)
+    } catch (e) {
+      // 로그아웃 중 오류 발생 시 처리
+      debugPrint('로그아웃 중 오류 발생: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('로그아웃 중 오류가 발생했습니다: $e')),
+      );
     }
   }
 }
