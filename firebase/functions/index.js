@@ -64,7 +64,7 @@ exports.createStudentAuthAccount = onDocumentCreated(
       logger.warn(`학생 ${studentDocId}의 필수 필드 email 누락, 계속 진행`);
       return null; // 실패하더라도 계속 진행
     }
-    
+
     if (!studentData.password) {
       logger.warn(`학생 ${studentDocId}의 필수 필드 password 누락, 계속 진행`);
       return null; // 실패하더라도 계속 진행
@@ -324,7 +324,7 @@ exports.createBulkStudentAccounts = onCall(
 
     // 3. 요청 데이터 검증
     const students = request.data.students;
-    const initialPassword = request.data.initialPassword || "student123"; // 기본값 설정
+    const initialPassword = request.data.initialPassword || "123456"; // 기본값 설정
 
     if (!students || !Array.isArray(students) || students.length === 0) {
       logger.warn("잘못된 요청 데이터 (students 배열 누락 또는 비어 있음)", {
@@ -425,7 +425,10 @@ exports.createBulkStudentAccounts = onCall(
 
         // Firestore에 저장할 데이터 준비
         // 학교 코드는 뒤 4자리만 사용
-        const shortSchoolCode = schoolCode.length > 4 ? schoolCode.substring(schoolCode.length - 4) : schoolCode;
+        const shortSchoolCode =
+          schoolCode.length > 4
+            ? schoolCode.substring(schoolCode.length - 4)
+            : schoolCode;
         const studentDocData = {
           schoolCode: shortSchoolCode,
           schoolName: schoolName,
@@ -604,177 +607,110 @@ exports.updateStudentGender = onCall(
 );
 
 /**
- * 학생 로그인 함수 (HTTPS Callable)
+ * 학생 로그인 이메일 조회 함수 (HTTPS Callable)
  *
- * 학생이 학교명, 학번, 비밀번호를 사용하여 로그인하고 Custom Token을 발급받습니다.
- * 중요: 이 함수는 서버에서 비밀번호를 직접 확인하지 않습니다.
- * 클라이언트에서 Firebase Auth SDK(signInWithEmailAndPassword)를 사용하는 것이 일반적입니다.
- * 이 함수는 email 존재 여부만 확인하고 Custom Token을 발급하므로,
- * 클라이언트에서 이미 인증을 거쳤거나 특별한 사유가 있는 경우에만 사용해야 합니다.
+ * 학생이 학교명과 학번을 제공하면 해당 학생의 Firebase Auth 이메일 주소를 반환합니다.
+ * 이 이메일은 클라이언트에서 signInWithEmailAndPassword 메서드에 사용됩니다.
  */
-exports.studentLogin = onCall(
-  { region: REGION }, // 함수 실행 리전
-  async (request) => {
-    logger.info("studentLogin 함수 시작", { structuredData: true });
+exports.getStudentLoginEmail = onCall({ region: REGION }, async (request) => {
+  logger.info("getStudentLoginEmail 함수 시작", { structuredData: true });
 
-    // 1. 요청 데이터 검증
-    const schoolName = request.data.schoolName;
-    const studentId = request.data.studentId; // 학번
-    const password = request.data.password; // 비밀번호 (현재 로직에서는 직접 사용 안 함)
+  // 1. 요청 데이터 검증
+  const schoolName = request.data.schoolName?.trim();
+  const studentId = request.data.studentId?.trim();
 
-    if (!schoolName || !studentId || !password) {
-      logger.warn(
-        "잘못된 요청 데이터 (schoolName, studentId, password 중 누락)",
-        { requestData: request.data }
-      );
-      throw new HttpsError(
-        "invalid-argument",
-        "학교명, 학번, 비밀번호가 필요합니다."
-      );
+  if (!schoolName || !studentId) {
+    logger.warn("잘못된 요청 데이터 (schoolName 또는 studentId 누락)", {
+      requestData: request.data,
+    });
+    throw new HttpsError("invalid-argument", "학교명과 학번이 필요합니다.");
+  }
+
+  logger.info(`로그인 이메일 요청: 학교=${schoolName}, 학번=${studentId}`, {
+    schoolName,
+    studentId,
+  });
+
+  try {
+    // 2. 학교 정보 조회 (학교명으로 schoolCode 찾기)
+    const schoolsSnapshot = await db
+      .collection("schools")
+      .where("schoolName", "==", schoolName)
+      .limit(1)
+      .get();
+
+    if (schoolsSnapshot.empty) {
+      logger.error(`학교 정보 없음 (학교명: ${schoolName})`, { schoolName });
+      throw new HttpsError("not-found", "해당 학교 정보를 찾을 수 없습니다.");
     }
-    logger.info(`로그인 요청: 학교=${schoolName}, 학번=${studentId}`, {
-      schoolName,
+
+    const schoolData = schoolsSnapshot.docs[0].data();
+    let schoolCode = schoolData.schoolCode;
+
+    // 학교 코드의 마지막 4자리만 사용 (일관성 유지)
+    if (schoolCode.length > 4) {
+      schoolCode = schoolCode.substring(schoolCode.length - 4);
+    } else {
+      schoolCode = schoolCode.padStart(4, "0");
+    }
+
+    logger.info(`학교 코드 찾음: ${schoolCode}`, { schoolName, schoolCode });
+
+    // 3. 학생 이메일 구성
+    // 이메일 형식: (연도 두자리)(학번)@school(학교코드 마지막 4자리).com
+    const currentYear = new Date().getFullYear().toString().slice(-2); // 연도 마지막 2자리
+    const email = `${currentYear}${studentId}@school${schoolCode}.com`;
+
+    logger.info(`학생 이메일 구성: ${email}`, {
       studentId,
+      schoolCode,
+      email,
     });
 
+    // 4. Firebase Auth에서 이메일로 사용자 존재 여부 확인 (선택적)
     try {
-      // 2. 학교 정보 조회 (학교명으로 schoolCode 찾기)
-      const schoolsSnapshot = await db
-        .collection("schools")
-        .where("schoolName", "==", schoolName)
-        .limit(1)
-        .get();
-
-      if (schoolsSnapshot.empty) {
-        logger.error(`학교 정보 없음 (학교명: ${schoolName})`, { schoolName });
-        throw new HttpsError("not-found", "해당 학교 정보를 찾을 수 없습니다.");
-      }
-      const schoolData = schoolsSnapshot.docs[0].data();
-      const schoolCode = schoolData.schoolCode;
-      logger.info(`학교 코드 찾음: ${schoolCode}`, { schoolName, schoolCode });
-
-      // 3. 학생 이메일 구성
-      // 이메일 형식: (연도 두자리)(학번)@school(학교코드 뒤 4자리).com
-      const currentYear = new Date().getFullYear().toString().slice(-2); // 연도 마지막 2자리
-      // 학교 코드는 뒤 4자리만 사용
-      const shortSchoolCode = schoolCode.length > 4 ? schoolCode.substring(schoolCode.length - 4) : schoolCode;
-      const email = `${currentYear}${studentId}@school${shortSchoolCode}.com`;
-      logger.info(`학생 이메일 구성: ${email}`, {
-        studentId,
-        schoolCode,
-        email,
-      });
-
-      // 4. Firebase Auth에서 이메일로 사용자 조회 (비밀번호 검증 안 함!)
-      let userRecord;
-      try {
-        userRecord = await auth.getUserByEmail(email);
-        logger.info(
-          `Auth 사용자 조회 성공 (Email: ${email}, UID: ${userRecord.uid})`,
-          { email, uid: userRecord.uid }
-        );
-      } catch (authError) {
-        logger.error(`Auth 사용자 조회 실패 (Email: ${email})`, {
-          email,
-          error: authError.message,
-        });
-        if (authError.code === "auth/user-not-found") {
-          throw new HttpsError(
-            "not-found",
-            "해당 정보로 가입된 학생이 없습니다. 학교명과 학번을 확인해주세요." // 사용자 친화적 메시지
-          );
-        }
-        // 다른 Auth 오류 (예: 네트워크 오류)
-        throw new HttpsError(
-          "internal",
-          "인증 정보 확인 중 오류가 발생했습니다."
-        );
-      }
-
-      // 5. Firestore에서 학생 정보 조회 (Auth UID 사용)
-      const studentsSnapshot = await db
-        .collection("students")
-        .where("authUid", "==", userRecord.uid)
-        .limit(1)
-        .get();
-
-      if (studentsSnapshot.empty) {
-        // Auth에는 계정이 있으나 Firestore에 매칭되는 학생 정보가 없는 경우
-        logger.error(
-          `Firestore 학생 정보 불일치 (Auth UID: ${userRecord.uid})`,
-          { authUid: userRecord.uid, email }
-        );
+      await auth.getUserByEmail(email);
+      logger.info(`이메일 확인 성공: ${email}`, { email });
+    } catch (authError) {
+      if (authError.code === "auth/user-not-found") {
+        logger.error(`Auth 사용자 없음 (Email: ${email})`, { email });
         throw new HttpsError(
           "not-found",
-          "학생 정보를 찾을 수 없습니다. 관리자에게 문의하세요." // 데이터 불일치 가능성 알림
+          "해당 학번으로 등록된 계정을 찾을 수 없습니다."
         );
       }
-      const studentDoc = studentsSnapshot.docs[0];
-      const studentData = studentDoc.data();
-      const studentDocId = studentDoc.id;
-      logger.info(`Firestore 학생 정보 조회 성공 (Doc ID: ${studentDocId})`, {
-        docId: studentDocId,
-        authUid: userRecord.uid,
+      // 다른 Auth 오류는 내부 서버 오류로 처리
+      logger.error(`Auth 사용자 조회 중 오류 (Email: ${email})`, {
+        email,
+        error: authError.message,
       });
-
-      // 6. Custom Token 생성 (클라이언트에서 signInWithCustomToken으로 사용)
-      // 추가 클레임에 필요한 정보 포함
-      const additionalClaims = {
-        role: "student", // 사용자 역할
-        studentId: studentData.studentId,
-        grade: studentData.grade,
-        classNum: studentData.classNum,
-        studentNum: studentData.studentNum,
-        schoolCode: studentData.schoolCode,
-        schoolName: studentData.schoolName,
-      };
-      const customToken = await auth.createCustomToken(
-        userRecord.uid,
-        additionalClaims
+      throw new HttpsError(
+        "internal",
+        "계정 정보 확인 중 오류가 발생했습니다."
       );
-      logger.info(`Custom Token 생성 성공 (Auth UID: ${userRecord.uid})`, {
-        authUid: userRecord.uid,
-      });
+    }
 
-      // 7. 마지막 로그인 시간 업데이트 (선택 사항)
-      await studentDoc.ref.update({
-        lastLoginAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-      logger.info(`마지막 로그인 시간 업데이트 (Doc ID: ${studentDocId})`, {
-        studentDocId,
-      });
+    // 5. 성공 응답: 이메일 반환
+    return {
+      success: true,
+      email: email,
+      message: "로그인에 사용할 이메일 주소입니다.",
+    };
+  } catch (error) {
+    logger.error(`로그인 이메일 조회 중 오류 발생`, {
+      schoolName,
+      studentId,
+      error: error.message,
+      stack: error.stack,
+    });
 
-      // 8. 성공 응답 반환 (Custom Token 및 필요한 학생 정보)
-      return {
-        success: true,
-        customToken: customToken,
-        studentData: {
-          // 클라이언트에서 바로 사용할 수 있는 정보
-          id: studentDocId, // Firestore 문서 ID
-          authUid: userRecord.uid,
-          name: studentData.name,
-          grade: studentData.grade,
-          classNum: studentData.classNum,
-          studentNum: studentData.studentNum,
-          gender: studentData.gender,
-          schoolName: studentData.schoolName,
-          schoolCode: studentData.schoolCode,
-          studentId: studentData.studentId, // 학번
-          email: studentData.email,
-        },
-      };
-    } catch (error) {
-      logger.error(`학생 로그인 처리 중 오류 발생`, {
-        schoolName,
-        studentId,
-        error: error.message,
-        stack: error.stack,
-      });
-      if (error instanceof HttpsError) {
-        throw error; // HttpsError는 그대로 다시 던짐
-      } else {
-        throw new HttpsError("internal", "로그인 처리 중 오류가 발생했습니다.");
-      }
+    if (error instanceof HttpsError) {
+      throw error; // HttpsError는 그대로 다시 던짐
+    } else {
+      throw new HttpsError(
+        "internal",
+        "로그인 이메일 조회 중 오류가 발생했습니다."
+      );
     }
   }
-);
+});

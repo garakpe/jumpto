@@ -106,8 +106,35 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final userDoc = await _usersCollection.doc(uid).get();
       final userData = userDoc.data() as Map<String, dynamic>?;
 
+      // users 컬렉션에 사용자 정보가 없으면 students 컬렉션에서 authUid로 조회 
       if (userData == null) {
-        return null;
+        debugPrint('users 컬렉션에서 사용자($uid) 정보를 찾을 수 없음, students 컬렉션 조회');
+        final studentQuery = await _firestore.collection('students')
+            .where('authUid', isEqualTo: uid)
+            .limit(1)
+            .get();
+            
+        if (studentQuery.docs.isEmpty) {
+          debugPrint('students 컬렉션에서도 authUid가 $uid인 학생을 찾을 수 없음');
+          return null;
+        }
+        
+        final studentData = studentQuery.docs.first.data() as Map<String, dynamic>;
+        debugPrint('students 컬렉션에서 학생 정보 발견: ${studentQuery.docs.first.id}');
+        
+        // Students 데이터에서 User 객체로 변환
+        return domain.User(
+          id: uid,
+          email: studentData['email'],
+          displayName: studentData['name'],
+          role: domain.UserRole.student,
+          schoolCode: studentData['schoolCode'],
+          schoolName: studentData['schoolName'],
+          classNum: studentData['classNum'],
+          studentNum: studentData['studentNum'],
+          studentId: studentData['studentId'],
+          gender: studentData['gender'],
+        );
       }
 
       // 사용자 데이터 파싱
@@ -367,9 +394,23 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
 
       final uid = userCredential.user!.uid;
+      debugPrint('Firebase Auth 로그인 성공, UID: $uid, 이메일: $email');
+      
+      // 학생 정보 조회 시도 - 여기에 디버깅 로그 추가
+      debugPrint('Firestore에서 사용자 정보 조회 시도 (UID: $uid)');
       final userData = await _getUserData(uid);
-
+      
       if (userData == null) {
+        debugPrint('사용자 정보 조회 실패: userData는 null, UID: $uid');
+        
+        // 추가 디버그: users 컬렉션 확인
+        final userDoc = await _firestore.collection('users').doc(uid).get();
+        if (!userDoc.exists) {
+          debugPrint('users 컬렉션에 문서가 없음: $uid');
+        } else {
+          debugPrint('users 컬렉션 문서 데이터: ${userDoc.data()}');
+        }
+        
         throw ServerException(message: '사용자 정보를 찾을 수 없습니다.');
       }
 
@@ -403,83 +444,95 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       debugPrint('학생 로그인 시도: 학교=$schoolName, 학번=$studentId');
 
-      // 학교 이름 트림 처리
+      // 1. 학교 이름 및 학번 트림 처리
       final trimmedSchoolName = schoolName.trim();
       final trimmedStudentId = studentId.trim();
 
       debugPrint('학교 이름 처리: "$trimmedSchoolName", 학번: "$trimmedStudentId"');
 
-      // 학교 정보 조회 - Firestore에서 학교 이름으로 학교 코드 확인
-      try {
-        final schoolsSnapshot =
-            await _schoolsCollection
-                .where('schoolName', isEqualTo: trimmedSchoolName)
-                .limit(1)
-                .get();
-
-        if (schoolsSnapshot.docs.isNotEmpty) {
-          final docData =
-              schoolsSnapshot.docs.first.data() as Map<String, dynamic>;
-          final schoolCode = docData['schoolCode'] as String?;
-          debugPrint('학교 정보 찾음: $trimmedSchoolName (code: $schoolCode)');
-        } else {
-          debugPrint('학교 정보를 찾을 수 없음: $trimmedSchoolName');
-        }
-      } catch (e) {
-        debugPrint('학교 정보 조회 오류: $e');
-      }
-
-      // Cloud Functions를 사용하여 학생 로그인
-      debugPrint('Cloud Functions 호출 시작 - studentLogin');
-      final result = await _cloudFunctionsService.studentLogin(
+      // 2. 학생 로그인 이메일 조회 (새로 추가된 Cloud Function 사용)
+      final email = await _cloudFunctionsService.getStudentLoginEmail(
         schoolName: trimmedSchoolName,
         studentId: trimmedStudentId,
+      );
+      
+      debugPrint('학생 로그인 이메일 조회 성공: $email');
+
+      // 3. Firebase Auth SDK를 사용하여 직접 로그인
+      final userCredential = await _firebaseAuth.signInWithEmailAndPassword(
+        email: email,
         password: password,
       );
 
-      debugPrint('학생 로그인 결과: ${result.toString()}');
+      final uid = userCredential.user!.uid;
+      debugPrint('Firebase 로그인 성공: $uid');
 
-      // 커스텀 토큰으로 로그인
-      if (result['customToken'] != null) {
-        debugPrint('커스텀 토큰을 사용하여 Firebase 인증 시도');
-        await _firebaseAuth.signInWithCustomToken(result['customToken']);
-        debugPrint('커스텀 토큰으로 로그인 성공');
-      } else {
-        debugPrint('커스텀 토큰이 없습니다.');
-        throw ServerException(message: '인증 토큰이 없습니다');
+      // 4. Firestore에서 학생 상세 정보 조회
+      final userData = await _getUserData(uid);
+      if (userData == null) {
+        debugPrint('학생 데이터를 찾을 수 없음');
+        throw ServerException(message: '학생 정보를 찾을 수 없습니다.');
       }
 
-      // 인증 후 사용자 정보 가져오기
-      final firebaseUser = _firebaseAuth.currentUser;
-      if (firebaseUser == null) {
-        debugPrint('Firebase 인증 후 사용자 정보가 없습니다.');
-        throw ServerException(message: '로그인에 실패했습니다.');
+      // 5. 학생 계정 확인
+      if (userData.role != domain.UserRole.student) {
+        debugPrint('계정이 학생이 아님');
+        await _firebaseAuth.signOut();
+        throw ServerException(message: '학생 계정이 아닙니다.');
       }
-      debugPrint('Firebase 사용자 확인: ${firebaseUser.uid}');
 
-      // 학생 정보 구성
-      final studentData = result['studentData'] as Map<String, dynamic>;
-      debugPrint('학생 정보: $studentData');
+      // 6. 마지막 로그인 시간 업데이트 (선택 사항)
+      try {
+        final studentsSnapshot = await _studentsCollection
+            .where('authUid', isEqualTo: uid)
+            .limit(1)
+            .get();
+            
+        if (studentsSnapshot.docs.isNotEmpty) {
+          await studentsSnapshot.docs.first.reference.update({
+            'lastLoginAt': FieldValue.serverTimestamp(),
+          });
+          debugPrint('마지막 로그인 시간 업데이트 완료');
+        }
+      } catch (e) {
+        // 로그인 시간 업데이트 실패는 무시 (핵심 기능 아님)
+        debugPrint('마지막 로그인 시간 업데이트 실패 (무시): $e');
+      }
 
-      return domain.User(
-        id: firebaseUser.uid,
-        email: firebaseUser.email ?? '',
-        displayName: studentData['name'] ?? '',
-        role: domain.UserRole.student,
-        schoolCode: studentData['schoolCode'] ?? '',
-        schoolName: studentData['schoolName'] ?? '',
-        grade: studentData['grade'] ?? '',
-        classNum: studentData['classNum'] ?? '',
-        studentNum: studentData['studentNum'] ?? '',
-        studentId: studentId,
-        gender: studentData['gender'] ?? '',
-        isApproved: true,
-      );
+      return userData;
     } catch (e) {
       debugPrint('학생 로그인 오류: $e');
       if (e is ServerException) {
         rethrow;
       }
+      
+      // Firebase Auth 오류를 사용자 친화적 메시지로 변환
+      if (e is firebase_auth.FirebaseAuthException) {
+        String message = '로그인에 실패했습니다.';
+        
+        switch (e.code) {
+          case 'user-not-found':
+            message = '해당 학번으로 등록된 계정을 찾을 수 없습니다.';
+            break;
+          case 'wrong-password':
+            message = '비밀번호가 일치하지 않습니다.';
+            break;
+          case 'too-many-requests':
+            message = '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.';
+            break;
+          case 'invalid-email':
+            message = '이메일 형식이 올바르지 않습니다.';
+            break;
+          case 'user-disabled':
+            message = '계정이 비활성화되었습니다. 관리자에게 문의하세요.';
+            break;
+          default:
+            message = '로그인 중 오류가 발생했습니다: ${e.message}';
+        }
+        
+        throw ServerException(message: message);
+      }
+      
       throw ServerException(message: '학생 로그인 중 오류가 발생했습니다: ${e.toString()}');
     }
   }

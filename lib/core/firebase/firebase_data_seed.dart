@@ -42,21 +42,22 @@ class FirebaseDataSeed {
           'address': '서울특별시 송파구 백제고분로 509',
           'type': '고등학교',
           'region': '서울',
-        }
+        },
       ];
 
       // 배치 처리로 한번에 저장
       WriteBatch batch = _firestore.batch();
-      
+
       // 각 학교별로 처리
       for (final school in schools) {
         // 이미 존재하는지 확인
-        final querySnapshot = await _firestore
-            .collection('schools')
-            .where('schoolName', isEqualTo: school['schoolName'])
-            .limit(1)
-            .get();
-        
+        final querySnapshot =
+            await _firestore
+                .collection('schools')
+                .where('schoolName', isEqualTo: school['schoolName'])
+                .limit(1)
+                .get();
+
         // 존재하지 않으면 추가
         if (querySnapshot.docs.isEmpty) {
           final docRef = _firestore.collection('schools').doc();
@@ -69,7 +70,7 @@ class FirebaseDataSeed {
           print('학교 데이터 이미 존재: ${school['schoolName']}');
         }
       }
-      
+
       // 배치 처리 실행
       await batch.commit();
       print('학교 데이터 시드 완료');
@@ -139,7 +140,7 @@ class FirebaseDataSeed {
   /// 테스트용 학생 계정 생성
   Future<void> _seedTestStudent() async {
     const email = 'student1@school1234.com'; // 이메일 형식 통일 (@school+학교코드로 변경)
-    const password = 'student123';
+    const password = '123456';
     const displayName = '테스트 학생';
     const schoolCode = '1234'; // 학교 코드 4자리 표준화
     const studentNum = '1';

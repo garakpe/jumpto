@@ -234,6 +234,25 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
             password: studentPassword, // 고정된 초기 비밀번호 사용
           );
           debugPrint('Auth 계정 생성 성공: $email');
+          
+          // Firestore users 컬렉션에도 학생 정보 저장 (추가)
+          await _firestore.collection('users').doc(userCredential.user!.uid).set({
+            'email': email,
+            'displayName': student.name,
+            'role': 'student',
+            'authUid': userCredential.user!.uid,
+            'schoolCode': student.schoolCode,
+            'schoolName': student.schoolName,
+            'grade': student.grade,
+            'classNum': student.classNum,
+            'studentNum': student.studentNum,
+            'studentId': student.studentId,
+            'gender': student.gender,
+            'createdAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+          debugPrint('users 컬렉션에 학생 정보 저장 성공: ${userCredential.user!.uid}');
+          
         } catch (authError) {
           // 자세한 에러 로깅
           debugPrint('Auth 계정 생성 오류: $authError (학생: ${student.name}, 이메일: $email)');

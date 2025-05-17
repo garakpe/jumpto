@@ -101,6 +101,11 @@
 
 ### 완료된 작업 (최근 추가)
 
+- 학생 로그인 버그 수정
+  - 학생 계정 생성 시 users 컬렉션에도 데이터 저장하도록 변경
+  - 사용자 정보 조회 시 users 컬렉션을 찾지 못할 경우 students 컬렉션에서도 조회하도록 수정
+  - 디버깅 로그 추가하여 로그인 실패 지점 파악 가능하도록 개선
+
 - 학생 관리 기능 구현
   - Student 엔티티 구현
   - StudentRepository 인터페이스 및 구현체 개발
@@ -235,13 +240,13 @@
 - SchoolSelector 위젯 수정
   - 학교 선택 후 UI 업데이트 문제 해결
   - 리스너 관리 로직 개선
-  - 학교 선택 시 _schoolNameController 업데이트 문제 수정
+  - 학교 선택 시 \_schoolNameController 업데이트 문제 수정
   - 선택된 학교가 있을 때 중복 검색 방지 로직 추가
   - 초기 학교 설정 기능 추가
 - RegisterPage 수정
   - 학교 선택 기능 개선
-  - _schoolNameController 직접 참조 제거
-  - _selectedSchool 상태에 의존하도록 수정
+  - \_schoolNameController 직접 참조 제거
+  - \_selectedSchool 상태에 의존하도록 수정
   - 학교 선택 필수 유효성 검사 추가
 
 ### 최근 완료된 작업 (학생 인증 시스템 수정)
@@ -304,6 +309,15 @@
   - 관리자 경로, 학생 마이페이지, 학생 업로드 페이지 등 모든 권한 체크 부분에 null safety 적용 ✅
   - 실제 코드의 잠재적인 null 참조 오류 가능성 제거 ✅
 
+### 최근 완료된 작업 (학생 로그인 시스템 보안 강화) ✅
+
+- 학생 로그인 시스템 리팩토링 ✅
+  - Custom Token 방식에서 Firebase Auth SDK의 `signInWithEmailAndPassword`를 직접 사용하는 방식으로 변경 ✅
+  - 새로운 Cloud Function `getStudentLoginEmail` 추가 (학교명과 학번으로 이메일 주소만 반환) ✅
+  - `CloudFunctionsService` 클래스에 `getStudentLoginEmail` 메서드 추가 ✅
+  - `AuthRemoteDataSourceImpl`의 `signInStudent` 메서드 개선 (이메일 조회 후 Firebase Auth SDK로 직접 인증) ✅
+  - 비밀번호 검증 로직을 Firebase Auth에서 처리하도록 변경하여 보안 강화 ✅
+
 ### 최근 완료된 작업 (인증 흐름 최적화) ✅
 
 - AuthCubit 클래스 최적화 ✅
@@ -325,7 +339,7 @@
   - Firebase CLI를 이용한 함수 배포
   - 학생 계정 자동 생성 및 비밀번호 초기화 테스트
   - 성별 업데이트 기능 테스트
-  - 학생 로그인 기능 테스트
+  - 학생 로그인 이메일 조회 및 직접 로그인 테스트
 - 학번(studentId)과 학생 번호(studentNum) 구분 확실한 적용
   - 전체 프로젝트에서 일관된 용어 사용
   - UI/UX에서 학생에게 표시되는 학번/학생번호 용어 통일
@@ -362,6 +376,8 @@
 - 학생 로그인 시 HTTP 직접 호출로 인한 CORS 이슈 발생 ✅
 - Cloud Functions에서 "해당 학교 정보를 찾을 수 없습니다." 에러 발생 ✅
 - 로그아웃 후 null check operator 에러 발생 문제 ✅
+- 서버 측 인증 코드에서 비밀번호 검증이 잘못 이루어지는 보안 취약점 ✅
+- 학생 로그인 시 인증 후 사용자 정보 찾을 수 없는 문제 ✅
 
 ### 새로 추가된 내용
 
@@ -372,6 +388,11 @@
   - User 및 UserModel 클래스에 schoolName 필드 추가
   - AuthRemoteDataSource 클래스 이메일 생성 로직 수정
   - 학생 여부에 따른 적절한 로그인 처리 개선
+- 학생 로그인 보안 강화
+  - Custom Token 방식 대신 Firebase Auth SDK 직접 호출 방식으로 변경
+  - 학교명과 학번으로 이메일만 조회한 후 직접 로그인하도록 수정
+  - 새로운 Cloud Function `getStudentLoginEmail` 추가
+  - 비밀번호 검증 로직이 서버가 아닌 Firebase Auth에서 직접 처리되어 보안 강화
 - 학생 로그인 유스케이스(SignInStudent) 구현
 - 관리자 관련 기능 구현
   - 관리자 역할 추가 (UserRole enum 수정)
@@ -430,7 +451,7 @@
   - 적절한 에러 처리 및 로깅 추가 ✅
 - 라우터 null safety 적용 ✅
   - AppRouter의 redirect 함수에서 null 체크 강화 ✅
-  - _currentUser 객체 접근 전 isLoggedIn 확인 추가 ✅
+  - \_currentUser 객체 접근 전 isLoggedIn 확인 추가 ✅
   - 모든 사용자 속성 접근 시 null 체크 로직 적용 ✅
 
 ### 테스트 계정 정보
@@ -445,7 +466,7 @@
 - 이메일: student1@school.com (직접 사용할 필요 없음)
 - 학교 코드: school1
 - 학번: 1
-- 비밀번호: student123
+- 비밀번호: 123456
 
 **관리자 계정:**
 
