@@ -17,74 +17,85 @@ import 'di/injection_container.dart' as di;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Firebase 초기화 (업데이트됨)
+  // 순차적 초기화로 안정성 보장
+  
+  // 1. 웹 환경에서 팝스 데이터 미리 로드
+  if (kIsWeb) {
+    try {
+      await _preloadPapsStandards();
+    } catch (e) {
+      debugPrint('팝스 데이터 로드 오류 - 무시하고 진행: $e');
+    }
+  }
+  
+  // 2. Firebase 초기화
   await FirebaseInitializer.initialize();
 
-  // 의존성 주입 초기화
+  // 3. 의존성 주입 초기화
   await di.init();
-
-  // 웹 환경에서 PAPS 기준표 미리 로드
-  if (kIsWeb) {
-    await _preloadPapsStandards();
-  }
 
   runApp(const MyApp());
 }
 
-/// 웹 환경에서 팝스 기준표 데이터를 미리 로드하는 함수
+/// 웹 환경에서 팝스 기준표 데이터를 미리 로드하는 함수 - 최적화 버전
 Future<void> _preloadPapsStandards() async {
   try {
-    // 미리 로드된 데이터가 있는지 확인
+    // 미리 로드된 데이터가 있는지 확인 및 유효성 검사
     final cachedData = html.window.localStorage['paps_standards_cache'];
-    if (cachedData != null && cachedData.isNotEmpty) {
-      print('캐싱된 팝스 기준표 데이터가 있어 사용합니다.');
-      return;
-    }
-
-    // 각 경로를 시도하면서 처음 성공하는 경로의 데이터를 캐싱
-    try {
-      final response = await html.window.fetch(
-        'assets/data/paps_standards.json',
-      );
-      if (response.ok) {
-        final text = await response.text();
-        html.window.localStorage['paps_standards_cache'] = text;
-        print('팝스 기준표 데이터를 성공적으로 미리 로드했습니다.');
+    final cacheTimestamp = html.window.localStorage['paps_standards_cache_timestamp'];
+    
+    if (cachedData != null && cachedData.isNotEmpty && cacheTimestamp != null) {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final cacheTime = int.tryParse(cacheTimestamp) ?? 0;
+      final maxAgeMs = 24 * 60 * 60 * 1000; // 24시간
+      
+      // 캐싱된 데이터가 유효하고 기한이 남았는지 확인
+      if (now - cacheTime < maxAgeMs) {
+        debugPrint('유효한 팝스 기준표 캐싱 데이터 사용 (${cachedData.length} bytes)');
         return;
       }
-    } catch (e) {
-      print('첫 번째 경로 미리 로드 실패: $e');
     }
 
-    try {
-      final response = await html.window.fetch(
-        '/assets/data/paps_standards.json',
-      );
-      if (response.ok) {
+    // 시도할 경로 리스트
+    final paths = [
+      'assets/data/paps_standards.json',
+      '/assets/data/paps_standards.json',
+      'paps_standards.json',
+    ];
+    
+    // 모든 경로를 순차적으로 시도
+    for (final path in paths) {
+      try {
+        // 캐싱 방지를 위한 랜덤 파라미터 추가
+        final cacheBuster = DateTime.now().millisecondsSinceEpoch;
+        final response = await html.window.fetch('$path?_=$cacheBuster');
+        
+        if (!response.ok) continue;
+        
         final text = await response.text();
+        if (text.isEmpty) continue;
+        
+        // 유효한 데이터인지 확인 (기본적인 JSON 유효성 검사)
+        if (!(text.startsWith('{') && text.endsWith('}'))) continue;
+        
+        // 성공적으로 로드된 경우 캐싱
         html.window.localStorage['paps_standards_cache'] = text;
-        print('팝스 기준표 데이터를 두 번째 경로에서 성공적으로 미리 로드했습니다.');
+        html.window.localStorage['paps_standards_cache_timestamp'] = 
+            DateTime.now().millisecondsSinceEpoch.toString();
+            
+        debugPrint('팝스 기준표 데이터 로드 성공: $path (${text.length} bytes)');
         return;
+      } catch (e) {
+        // 오류 무시하고 다음 경로 시도
+        continue;
       }
-    } catch (e) {
-      print('두 번째 경로 미리 로드 실패: $e');
     }
-
-    try {
-      final response = await html.window.fetch('paps_standards.json');
-      if (response.ok) {
-        final text = await response.text();
-        html.window.localStorage['paps_standards_cache'] = text;
-        print('팝스 기준표 데이터를 세 번째 경로에서 성공적으로 미리 로드했습니다.');
-        return;
-      }
-    } catch (e) {
-      print('세 번째 경로 미리 로드 실패: $e');
-    }
-
-    print('모든 미리 로드 시도가 실패했습니다. LoadPapsStandards 클래스에서 폴백 데이터를 사용할 것입니다.');
+    
+    // 모든 시도 실패 시 조용히 실패 처리
+    debugPrint('팝스 기준표 데이터 로드 시도 실패, 기본 데이터 사용 예정');
   } catch (e) {
-    print('팝스 기준표 미리 로드 중 오류 발생: $e');
+    // 오류 발생시 무시하고 기본 데이터 사용
+    debugPrint('팝스 기준표 로드 오류, 기본 데이터 사용 예정');
   }
 }
 

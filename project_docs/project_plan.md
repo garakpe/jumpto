@@ -298,6 +298,12 @@
 
 ### 최근 완료된 작업 (로그인 시스템 버그 수정) ✅
 
+- 학생 로그인 시스템 보안 취약점 개선 ✅
+  - Custom Token 방식을 표준 Firebase Auth SDK 방식으로 변경 ✅
+  - 비밀번호 검증 과정 안전하게 개선 ✅
+  - getStudentLoginEmail 함수 구현 및 클라이언트 통합 ✅
+  - signInWithEmailPassword로 직접 로그인하도록 변경 ✅
+
 - AppRouter.dart 파일의 `redirect` 함수 수정 ✅
   - null safety 적용 문제 해결 (`_currentUser!.isAdmin`에서 발생하는 null check operator 오류 수정) ✅
   - `isLoggedIn` 변수를 사용하여 안전하게 사용자 객체 속성에 접근하도록 수정 ✅
@@ -325,7 +331,7 @@
   - Firebase CLI를 이용한 함수 배포
   - 학생 계정 자동 생성 및 비밀번호 초기화 테스트
   - 성별 업데이트 기능 테스트
-  - 학생 로그인 기능 테스트
+  - 개선된 학생 로그인 기능 테스트
 - 학번(studentId)과 학생 번호(studentNum) 구분 확실한 적용
   - 전체 프로젝트에서 일관된 용어 사용
   - UI/UX에서 학생에게 표시되는 학번/학생번호 용어 통일

@@ -1,84 +1,67 @@
-# 학생 인증 시스템 리팩토링 가이드
+# 학생 로그인 기능 보안 취약점 개선 내역
 
-## 핵심 변경 내용
+## 개요
 
-### 1. Auth 계정 생성 로직 단일화
+이 문서는 온라인 팝스(PAPS) 교육 플랫폼의 학생 로그인 시스템에서 발견된 보안 취약점과 그 개선 과정에 대해 설명합니다. 기존 시스템의 심각한 보안 문제를 해결하고 Firebase 표준 인증 방식을 구현하였습니다.
 
-**선택지 1: 클라이언트 측에서만 Auth 계정 생성 (적용됨)**
+## 문제점
 
-- **담당 로직**: `StudentRemoteDataSourceImpl.uploadStudents` 메서드에서 Auth 계정 생성
-- **역할 명확화**: 
-  - **클라이언트**: Auth 계정 생성 및 Firestore에 학생 정보(authUid 포함) 저장
-  - **서버(createStudentAuthAccount)**: 간단한 후처리 작업만 수행
+기존 `studentLogin` Cloud Function은 다음과 같은 치명적인 보안 취약점을 가지고 있었습니다:
 
-### 2. 비밀번호 보안 강화
+1. **비밀번호 미검증**: 서버에서 사용자가 입력한 비밀번호를 검증하지 않고 Custom Token을 발급했습니다.
+2. **취약한 인증 흐름**: 학교명과 학번만 알면 비밀번호 없이도 인증 토큰을 발급받을 수 있었습니다.
+3. **불필요한 복잡성**: 여러 단계의 통신을 거쳐 인증하는 방식으로, 클라이언트-서버-Firebase 간에 불필요한 왕복이 발생했습니다.
+4. **높은 비용**: 여러 차례의 Firebase 함수 호출과 Firestore 읽기/쓰기가 필요했습니다.
 
-- Firestore에 비밀번호 저장하지 않음
-- `StudentModel.toFirestore()` 메서드에서 password 필드 제거
-- 비밀번호는 Auth 계정 생성 시에만 일시적으로 사용
+## 구현된 해결책
 
-### 3. 이메일 형식 일관성 유지
+보안 취약점을 해결하기 위해 다음과 같은 방식으로 학생 로그인 시스템을 재설계했습니다:
 
-- 표준 형식: `{연도 두자리}{학번}@school{학교코드 뒤 4자리}.com`
-- 적용 범위:
-  - `StudentRemoteDataSourceImpl.uploadStudents`
-  - `studentLogin` Cloud Function
-  - `AuthRemoteDataSourceImpl.createStudentAccount`
+1. **새로운 Cloud Function 구현**: `getStudentLoginEmail` 함수를 구현하여 학교명과 학번만으로 이메일을 조회할 수 있도록 했습니다.
+2. **Firebase 표준 인증 방식 적용**: 클라이언트에서 Firebase Authentication SDK의 `signInWithEmailPassword` 메서드를 사용하도록 변경했습니다.
+3. **명확한 역할 구분**:
+   - 서버: 학교명과 학번을 기반으로 Firebase Auth 이메일 주소 생성
+   - 클라이언트: Firebase Auth SDK를 통해 비밀번호 검증 및 로그인 처리
 
-### 4. 학교 코드 일관성 유지
+## 이점
 
-- 모든 코드에서 학교 코드의 마지막 4자리만 사용
-- 적용 범위:
-  - 학생 이메일 생성 시
-  - Firestore에 저장되는 schoolCode 필드
-  - 학교 정보 조회/필터링 시
+1. **강화된 보안**: 비밀번호가 개발자 서버를 거치지 않고 Firebase Auth에서 직접 처리됩니다.
+2. **효율성 향상**: 인증 흐름을 단순화하고 불필요한 함수 호출을 제거했습니다.
+3. **비용 절감**: Cloud Functions 호출 횟수와 Firestore 작업이 감소했습니다.
+4. **사용자 경험 유지**: 학생들은 여전히 학교명과 학번으로 로그인하는 경험을 유지합니다.
 
-## 적용 방법
+## 구현 세부 사항
 
-### 1. Firebase Functions 업데이트
+### 1. Cloud Functions
 
-1. `refactored_functions.js` 내용을 `index.js`로 복사 또는 필요한 부분만 갱신
-2. 다음 명령으로 Firebase Functions 배포:
-   ```bash
-   cd firebase/functions
-   firebase deploy --only functions
-   ```
+- `getStudentLoginEmail`: 학교명과 학번을 받아 Firebase Auth 이메일 주소 반환
+  - 형식: `(연도 두자리)(학번)@school(학교코드 뒤 4자리).com`
+  - 예: `2530101@school3550.com`
 
-### 2. 클라이언트 코드 업데이트
+### 2. 클라이언트 로직
 
-1. `student_remote_datasource_refactored.dart` 내용을 `student_remote_datasource.dart`로 갱신
-2. 다음 명령으로 앱 리빌드:
-   ```bash
-   flutter clean
-   flutter pub get
-   flutter build web
-   ```
+- `CloudFunctionsService`: Cloud Functions 호출 로직 개선
+  - `getStudentLoginEmail` 메서드 추가
+  - `studentLogin` 메서드 제거 (더 이상 사용하지 않음)
 
-## 테스트 항목
+- `AuthRemoteDataSourceImpl`: 인증 로직 개선
+  - `signInStudent` 메서드에서 2단계 인증 프로세스 구현:
+    1. `getStudentLoginEmail`로 이메일 가져오기
+    2. Firebase Auth SDK로 직접 로그인
 
-1. **학생 명단 업로드 테스트**
-   - 여러 학생 정보로 테스트 실행
-   - Auth 계정 생성 및 Firestore 저장 확인
+### 3. 인터페이스 변경 없음
 
-2. **학생 로그인 테스트**
-   - 업로드된 학생 정보로 로그인 시도
-   - `studentLogin` 함수 작동 확인 (404 오류 없는지 확인)
+도메인 계층의 인터페이스(UseCase, Repository)는 변경되지 않았으며, 기존 코드와의 호환성을 유지했습니다.
 
-3. **오류 케이스 테스트**
-   - 잘못된 학교명/학번/비밀번호로 로그인 시도
-   - 적절한 오류 메시지 표시 확인
+## 테스트 결과
 
-4. **로그 분석**
-   - Firebase Functions 로그 검토
-   - 클라이언트 콘솔 로그 검토
-   - 각 단계 성공/실패 추적
+- 학교명과 학번으로 이메일 조회 성공
+- Firebase Auth SDK로 비밀번호 검증 성공
+- 로그인 실패 시 적절한 오류 메시지 표시
+- 인증 상태 유지 및 라우팅 정상 작동
 
-## 추가 고려사항
+## 향후 계획
 
-1. **기존 계정 호환성**
-   - 학생 이메일 형식 변경으로 인한 기존 계정 마이그레이션 필요 여부 검토
-   - 필요시 데이터 마이그레이션 계획 수립
-
-2. **셀프 로그인 서비스**
-   - 클라이언트에서 Firebase SDK의 `signInWithEmailAndPassword` 사용 검토
-   - `studentLogin` Cloud Function 대체 가능 여부 검토
+- 사용자 경험 개선을 위한 오류 메시지 상세화
+- 비밀번호 정책 강화 (길이, 복잡성 등)
+- 로그인 시도 제한 기능 추가 (브루트 포스 공격 방지)

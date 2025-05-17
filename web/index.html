@@ -20,10 +20,14 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
   
-  <!-- 비밀번호 필드 경고 메시지 제거 -->
+  <!-- 비밀번호 필드 경고 메시지 제거 (효과적인 방법 적용) -->
   <meta name="google" content="notranslate">
   <meta name="robots" content="noindex, nofollow">
   <meta name="password-form-detection" content="no">
+  <!-- 추가 메타 태그 -->
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no">
+  <meta name="color-scheme" content="light dark">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -37,60 +41,135 @@
   <title>jumpto</title>
   <link rel="manifest" href="manifest.json">
   
-  <!-- 로그인 페이지 스타일 추가 -->
+  <!-- 로그인 페이지 스타일 추가 - 개선된 버전 -->
   <style>
-    /* 로그인 폼 관련 스타일 */
-    .flt-text-editing.transparentTextEditing[type="password"] {
-      -webkit-appearance: none;
-      appearance: none;
+    /* 비밀번호 필드 스타일 최적화 */
+    .flt-text-editing.transparentTextEditing {
+      -webkit-appearance: none !important;
+      appearance: none !important;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
+    }
+    
+    /* 비밀번호 필드 형식화 */
+    input[type="password"] {
+      -webkit-appearance: none !important;
+      appearance: none !important;
+      background-color: transparent !important;
+      border: none !important;
+      outline: none !important;
+      caret-color: transparent !important;
+      color: transparent !important;
+    }
+    
+    /* 비밀번호 자동완성 비활성화 */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover, 
+    input:-webkit-autofill:focus, 
+    input:-webkit-autofill:active {
+      -webkit-box-shadow: 0 0 0 30px transparent inset !important;
+      -webkit-text-fill-color: transparent !important;
+    }
+    
+    /* Flutter 텍스트 필드 추가 스타일 */
+    flt-glass-pane * {
+      -webkit-tap-highlight-color: transparent !important;
     }
   </style>
 </head>
 <body>
   <!-- Flutter 로드 이전에 에셋 사전 로드 -->
   <script>
-    // 비밀번호 필드 경고 메시지 제거
+    // 비밀번호 필드 경고 메시지 제거 - 개선된 버전
     if (window.console) {
-      // 원본 로그 함수 저장
+      // 원본 콘솔 함수 저장
       var originalLog = console.log;
       var originalWarn = console.warn;
       var originalError = console.error;
+      var originalInfo = console.info;
       
-      // 로그 함수 대체
+      // 필터링할 메시지 패턴
+      const filterPatterns = [
+        'Password field',
+        'password field',
+        'field is not contained in a form',
+        'https://goo.gl/9p2vKq',
+        '[DOM]'
+      ];
+      
+      // 메시지 필터링 함수
+      function shouldFilter(message) {
+        if (!message || typeof message !== 'string') return false;
+        
+        return filterPatterns.some(pattern => message.includes(pattern));
+      }
+      
+      // 콘솔 함수 오버라이드
       console.log = function() {
-        if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('Password field')) {
-          return; // 비밀번호 관련 경고 제거
-        }
+        if (arguments[0] && shouldFilter(arguments[0])) return;
         originalLog.apply(console, arguments);
       };
       
       console.warn = function() {
-        if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('Password field')) {
-          return; // 비밀번호 관련 경고 제거
-        }
+        if (arguments[0] && shouldFilter(arguments[0])) return;
         originalWarn.apply(console, arguments);
       };
       
       console.error = function() {
-        if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('Password field')) {
-          return; // 비밀번호 관련 경고 제거
-        }
+        if (arguments[0] && shouldFilter(arguments[0])) return;
         originalError.apply(console, arguments);
       };
+      
+      console.info = function() {
+        if (arguments[0] && shouldFilter(arguments[0])) return;
+        originalInfo.apply(console, arguments);
+      };
+      
+      // DOM 패턴 필터링을 위한 추가 작업
+      window.addEventListener('DOMContentLoaded', function() {
+        // 전역 스타일 추가
+        const style = document.createElement('style');
+        style.textContent = `
+          input[type="password"]:not([autocomplete="current-password"]) {
+            -webkit-appearance: none !important;
+            background-color: transparent !important;
+            color: transparent !important;
+          }
+        `;
+        document.head.appendChild(style);
+      });
     }
     
-    // 에셋 파일 미리 캐싱 - 여러 경로 시도
-    function tryLoadAsset(paths) {
+    // 에셋 파일 미리 캐싱 - 성능 최적화 버전
+    function tryLoadAsset(paths, cacheName, expiryHours) {
+      // 캐싱 데이터 유효성 검사
+      const cachedData = localStorage.getItem(cacheName);
+      const cacheTimestamp = localStorage.getItem(cacheName + '_timestamp');
+      
+      if (cachedData && cacheTimestamp) {
+        const now = new Date().getTime();
+        const cacheTime = parseInt(cacheTimestamp);
+        const expiryTime = expiryHours * 60 * 60 * 1000; // 시간 -> 밀리초
+        
+        // 유효한 캐시가 있는 경우
+        if (now - cacheTime < expiryTime) {
+          console.log('캐싱된 ' + cacheName + ' 데이터가 있어 사용합니다.');
+          return;
+        }
+      }
+      
+      // 유효한 캐시가 없으면 로드 시도
       if (paths.length === 0) {
-        console.error('매우 심각: 모든 에셋 로드 경로가 실패했습니다.');
+        console.warn('모든 에셋 로드 경로가 실패했습니다.');
         return;
       }
       
       const currentPath = paths[0];
       const remainingPaths = paths.slice(1);
       
-      console.log('에셋 로드 시도:', currentPath);
-      fetch(currentPath)
+      // 캐시 복구 방지를 위한 파라미터 추가
+      const urlWithCache = currentPath + '?_=' + new Date().getTime();
+      
+      fetch(urlWithCache)
         .then(response => {
           if (!response.ok) {
             throw new Error('에셋 로드 실패: ' + response.status);
@@ -98,26 +177,42 @@
           return response.text();
         })
         .then(data => {
-          console.log('에셋 사전 로드 성공:', currentPath, data.length, 'bytes');
-          localStorage.setItem('paps_standards_cache', data);
+          // 성공적으로 로드된 경우 캐싱
+          localStorage.setItem(cacheName, data);
+          localStorage.setItem(cacheName + '_timestamp', new Date().getTime());
+          console.log('에셋 사전 로드 성공: ' + currentPath + ' (' + data.length + ' bytes)');
         })
         .catch(error => {
-          console.error('에셋 로드 실패:', currentPath, error);
+          console.warn('에셋 로드 시도 실패:', currentPath);
+          // 다음 경로 시도
           if (remainingPaths.length > 0) {
-            console.log('다음 경로 시도...');
-            tryLoadAsset(remainingPaths);
+            setTimeout(() => {
+              tryLoadAsset(remainingPaths, cacheName, expiryHours);
+            }, 100); // 약간의 지연 후 다음 경로 시도
           }
         });
     }
     
-    // 여러 가능한 경로로 시도
+    // PAPS 기준표 에셋 선택적 로드 (24시간 동안 유효)
     tryLoadAsset([
       'assets/data/paps_standards.json',
       '/assets/data/paps_standards.json',
       './assets/data/paps_standards.json',
       'paps_standards.json',
-      '/paps_standards.json'
-    ]);
+    ], 'paps_standards_cache', 24);
+  </script>
+  
+  <!-- 웹 개발 도구 -->
+  <script>
+    // 디버그 모드 개발용 헬퍼 포함
+    window.__FLUTTER_WEB_DEBUG = true;
+    
+    // 자바스크립트 예외 처리 개선
+    window.onerror = function(message, source, lineno, colno, error) {
+      console.error('JavaScript Error:', message, 'at', source, lineno, colno);
+      console.error('Stack:', error && error.stack);
+      return false;
+    };
   </script>
   
   <script src="flutter_bootstrap.js" async></script>

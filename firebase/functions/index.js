@@ -21,6 +21,12 @@ const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { logger } = require("firebase-functions"); // Firebase 로깅 사용
 
+// 개선된 로그인 관련 함수 가져오기
+const { getStudentLoginEmail } = require('./improved_login');
+
+// getStudentLoginEmail 함수 등록
+exports.getStudentLoginEmail = getStudentLoginEmail;
+
 // Firebase Admin SDK 초기화
 admin.initializeApp();
 

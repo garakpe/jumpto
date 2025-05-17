@@ -96,72 +96,63 @@ class CloudFunctionsService {
     }
   }
 
-  /// 학생 로그인
+  /// 학생 로그인 이메일 조회
   ///
-  /// 학생이 학교명과 학번으로 로그인할 때 사용
-  Future<Map<String, dynamic>> studentLogin({
+  /// 학생이 학교명과 학번으로 로그인할 때 사용할 이메일 주소를 반환
+  /// 비밀번호 검증은 Firebase Auth SDK에서 수행
+  Future<String> getStudentLoginEmail({
     required String schoolName,
     required String studentId,
-    required String password,
   }) async {
     try {
-      // 디버그 로그 - 민감 정보 제외
-      debugPrint('학생 로그인 시도 - 학교: $schoolName, 학번: $studentId');
-      debugPrint('Cloud Function 리전: asia-northeast3');
+      // 디버그 로그 최소화 - 필수 정보만 출력
+      debugPrint('학생 로그인 이메일 조회 - 학교: $schoolName, 학번: $studentId');
       
       // Firebase SDK의 httpsCallable을 사용하여 함수 호출
-      final callable = _functions.httpsCallable('studentLogin');
-      debugPrint('함수 호출 준비 완료: studentLogin');
+      final callable = _functions.httpsCallable('getStudentLoginEmail');
       
-      // 파라미터 로그 - 비밀번호는 마스킹
-      debugPrint('전송할 파라미터: {schoolName: $schoolName, studentId: $studentId, password: ******}');
-      
-      // 함수 호출 - 실제 요청에는 원래 비밀번호 포함
+      // 함수 호출
       final result = await callable.call({
-        'schoolName': schoolName,
-        'studentId': studentId,
-        'password': password,
+        'schoolName': schoolName.trim(),
+        'studentId': studentId.trim(),
       });
 
-      // 결과 로그 - 토큰과 같은 민감 정보는 마스킹
-      final Map<String, dynamic> safeResult = Map<String, dynamic>.from(result.data);
-      if (safeResult.containsKey('customToken')) {
-        safeResult['customToken'] = '********';
-      }
-      debugPrint('학생 로그인 결과: $safeResult');
-
-      // 결과 데이터 반환
+      // 결과 확인
       if (result.data is Map && result.data['success'] != true) {
         debugPrint('함수 호출 실패: ${result.data['message']}');
         throw ServerException(
-          message: result.data['message'] ?? '로그인에 실패했습니다'
+          message: result.data['message'] ?? '로그인 이메일 조회에 실패했습니다'
         );
       }
 
-      return Map<String, dynamic>.from(result.data);
+      // 이메일 반환
+      final email = result.data['email'];
+      if (email == null || email.toString().isEmpty) {
+        throw ServerException(message: '유효한 이메일을 받지 못했습니다');
+      }
+      
+      return email.toString();
     } on FirebaseFunctionsException catch (e) {
       // Firebase Functions 호출과 관련된 구체적인 오류 처리
       debugPrint(
-        'Firebase Functions Exception (studentLogin): ${e.code} - ${e.message}',
+        'Firebase Functions Exception (getStudentLoginEmail): ${e.code} - ${e.message}',
       );
       
-      String errorMessage = '로그인 중 오류가 발생했습니다';
+      String errorMessage = '로그인 정보 조회 중 오류가 발생했습니다';
       if (e.code == 'unavailable') {
         errorMessage = '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.';
       } else if (e.code == 'not-found') {
-        errorMessage = '학교 정보를 찾을 수 없습니다. 학교명을 확인해주세요.';
+        errorMessage = '학교 정보 또는 학생 정보를 찾을 수 없습니다. 입력 정보를 확인해주세요.';
       } else if (e.code == 'permission-denied') {
-        errorMessage = '로그인 권한이 없습니다. 계정 정보를 확인해주세요.';
+        errorMessage = '로그인 정보 조회 권한이 없습니다.';
       } else if (e.code == 'invalid-argument') {
         errorMessage = '입력한 정보가 올바르지 않습니다. 다시 확인해주세요.';
-      } else if (e.code == 'unauthenticated') {
-        errorMessage = '비밀번호가 일치하지 않습니다.';
       }
       
       throw ServerException(message: errorMessage);
     } catch (e) {
-      debugPrint('학생 로그인 중 오류: $e');
-      throw ServerException(message: '알 수 없는 오류로 로그인에 실패했습니다');
+      debugPrint('학생 로그인 이메일 조회 중 오류: $e');
+      throw ServerException(message: '알 수 없는 오류로 로그인 정보 조회에 실패했습니다');
     }
   }
 
