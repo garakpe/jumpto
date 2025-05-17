@@ -80,18 +80,59 @@ class AuthCubit extends Cubit<AuthState> {
     try {
       debugPrint('초기 인증 상태 확인 중...');
       emit(AuthLoading());
-      await Future.delayed(const Duration(milliseconds: 200));
-      emit(AuthUnauthenticated());
-      // 약간의 지연 후 실제 인증 상태 확인
-      Timer(const Duration(milliseconds: 300), () => checkAuthState());
+      await Future.delayed(const Duration(milliseconds: 100));
+      
+      // 초기 인증 상태 확인은 한 번만 실행
+      final result = await _getCurrentUser(NoParams());
+      
+      result.fold(
+        (failure) {
+          debugPrint('초기 인증 상태 확인 실패: ${failure.message}');
+          emit(AuthUnauthenticated());
+          AppRouter.setCurrentUser(null);
+        },
+        (user) {
+          if (user != null) {
+            debugPrint('초기 인증된 사용자: ${user.displayName}');
+            AppRouter.setCurrentUser(user);
+            emit(AuthAuthenticated(user));
+          } else {
+            debugPrint('초기 인증되지 않은 상태');
+            AppRouter.setCurrentUser(null);
+            emit(AuthUnauthenticated());
+          }
+        },
+      );
     } catch (e) {
       debugPrint('초기 인증 상태 설정 오류: $e');
       emit(AuthUnauthenticated());
+      AppRouter.setCurrentUser(null);
     }
   }
 
-  /// 현재 인증 상태 확인
+  // 마지막 체크 타임스탬프
+  DateTime? _lastAuthCheck;
+  // 최소 체크 간격 (밀리초)
+  static const _minCheckInterval = 2000;
+  
+  /// 현재 인증 상태 확인 - 최적화 버전
   Future<void> checkAuthState() async {
+    // 이전 체크로부터 최소 시간이 지나지 않았다면 무시
+    final now = DateTime.now();
+    if (_lastAuthCheck != null && 
+        now.difference(_lastAuthCheck!).inMilliseconds < _minCheckInterval) {
+      debugPrint('인증 상태 체크 무시: 최근에 이미 확인함 (${now.difference(_lastAuthCheck!).inMilliseconds}ms 전)');
+      return;
+    }
+    
+    // 현재 상태가 이미 로딩 중이면 중복 체크 방지
+    if (state is AuthLoading) {
+      debugPrint('인증 상태 체크 무시: 이미 로딩 중');
+      return;
+    }
+    
+    _lastAuthCheck = now;
+    
     try {
       emit(AuthLoading());
 
@@ -102,25 +143,33 @@ class AuthCubit extends Cubit<AuthState> {
           debugPrint('인증 상태 확인 중 실패: ${failure.message}');
           emit(AuthError(_mapFailureToMessage(failure)));
           emit(AuthUnauthenticated());
+          AppRouter.setCurrentUser(null);
         },
         (user) {
+          // 현재 상태와 동일한지 확인하여 불필요한 상태 변경 방지
           if (user != null) {
-            debugPrint('인증된 사용자: ${user.displayName}');
-            
-            // 로그아웃 직후에 호출되는 경우 등 특별 처리 
-            if (state is AuthUnauthenticated) {
-              Future.delayed(const Duration(milliseconds: 100), () {
-                AppRouter.setCurrentUser(user);
-                emit(AuthAuthenticated(user));
-              });
+            final bool isSameUser = (state is AuthAuthenticated) && 
+                (state as AuthAuthenticated).user.id == user.id;
+                
+            if (isSameUser) {
+              debugPrint('인증 상태 유지: 동일한 사용자 ${user.displayName}');
+              emit(state); // 현재 상태 유지
             } else {
+              debugPrint('인증 상태 변경: 사용자 ${user.displayName}');
               AppRouter.setCurrentUser(user);
               emit(AuthAuthenticated(user));
             }
           } else {
-            debugPrint('인증되지 않은 상태');
-            AppRouter.setCurrentUser(null);
-            emit(AuthUnauthenticated());
+            final bool alreadyUnauthenticated = state is AuthUnauthenticated;
+            
+            if (alreadyUnauthenticated) {
+              debugPrint('인증 상태 유지: 이미 인증되지 않은 상태');
+              emit(state); // 현재 상태 유지
+            } else {
+              debugPrint('인증 상태 변경: 인증되지 않은 상태로 변경');
+              AppRouter.setCurrentUser(null);
+              emit(AuthUnauthenticated());
+            }
           }
         },
       );
@@ -128,6 +177,7 @@ class AuthCubit extends Cubit<AuthState> {
       debugPrint('인증 상태 확인 중 예외 발생: $e');
       emit(AuthError('인증 상태 확인 중 오류가 발생했습니다.'));
       emit(AuthUnauthenticated());
+      AppRouter.setCurrentUser(null);
     }
   }
 

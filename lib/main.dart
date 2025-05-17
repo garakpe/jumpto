@@ -110,14 +110,29 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  // 앱 생명주기 변경 감지
+  // 마지막 앱 다시 활성화 시간
+  DateTime? _lastResumeTime;
+  // 최소 체크 간격 (밀리초)
+  static const _minResumeCheckInterval = 5000; // 5초
+  
+  // 앱 생명주기 변경 감지 - 최적화 버전
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     
     // 앱이 다시 포그라운드로 돌아왔을 때
     if (state == AppLifecycleState.resumed) {
+      // 지나치게 자주 호출되지 않도록 시간 제한 검사
+      final now = DateTime.now();
+      if (_lastResumeTime != null && 
+          now.difference(_lastResumeTime!).inMilliseconds < _minResumeCheckInterval) {
+        debugPrint('앱 활성화 인증 상태 체크 무시: 최근에 이미 체크함');
+        return;
+      }
+      
+      _lastResumeTime = now;
       debugPrint('앱이 다시 활성화됨 - 인증 상태 확인');
+      
       // 인증 상태 다시 확인
       final authCubit = di.sl<AuthCubit>();
       authCubit.checkAuthState();

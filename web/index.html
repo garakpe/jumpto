@@ -19,6 +19,11 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
+  
+  <!-- 비밀번호 필드 경고 메시지 제거 -->
+  <meta name="google" content="notranslate">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="password-form-detection" content="no">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -31,10 +36,49 @@
 
   <title>jumpto</title>
   <link rel="manifest" href="manifest.json">
+  
+  <!-- 로그인 페이지 스타일 추가 -->
+  <style>
+    /* 로그인 폼 관련 스타일 */
+    .flt-text-editing.transparentTextEditing[type="password"] {
+      -webkit-appearance: none;
+      appearance: none;
+    }
+  </style>
 </head>
 <body>
   <!-- Flutter 로드 이전에 에셋 사전 로드 -->
   <script>
+    // 비밀번호 필드 경고 메시지 제거
+    if (window.console) {
+      // 원본 로그 함수 저장
+      var originalLog = console.log;
+      var originalWarn = console.warn;
+      var originalError = console.error;
+      
+      // 로그 함수 대체
+      console.log = function() {
+        if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('Password field')) {
+          return; // 비밀번호 관련 경고 제거
+        }
+        originalLog.apply(console, arguments);
+      };
+      
+      console.warn = function() {
+        if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('Password field')) {
+          return; // 비밀번호 관련 경고 제거
+        }
+        originalWarn.apply(console, arguments);
+      };
+      
+      console.error = function() {
+        if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('Password field')) {
+          return; // 비밀번호 관련 경고 제거
+        }
+        originalError.apply(console, arguments);
+      };
+    }
+    
     // 에셋 파일 미리 캐싱 - 여러 경로 시도
     function tryLoadAsset(paths) {
       if (paths.length === 0) {
