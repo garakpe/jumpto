@@ -51,11 +51,21 @@ class _LoginPageState extends State<LoginPage> {
             // 로그인 성공 시 콘텐츠 선택 화면으로 이동
             context.go('/content-selection');
           } else if (state is AuthError) {
-            // 로그인 실패 시 오류 메시지 표시
+            // 로그인 실패 시 오류 메시지 표시 - 개선된 UX
+            ScaffoldMessenger.of(context).clearSnackBars(); // 기존 스낵바 제거
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
                 backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating, // 떠있는 스타일
+                action: SnackBarAction( // 닫기 버튼 추가
+                  label: '닫기',
+                  textColor: Colors.white,
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  },
+                ),
+                duration: const Duration(seconds: 6), // 더 긴 노출 시간
               ),
             );
           }

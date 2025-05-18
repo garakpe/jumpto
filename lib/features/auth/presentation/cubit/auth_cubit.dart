@@ -336,45 +336,63 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  /// 로그아웃 - 완전히 새로 구현
+  /// 로그아웃 - 안정성 강화 버전
   Future<void> signOut() async {
     try {
       debugPrint('로그아웃 시작');
       
+      // 이미 로그아웃 상태인 경우 무시
+      if (state is AuthUnauthenticated) {
+        debugPrint('이미 로그아웃 상태, 작업 건너뜀');
+        return;
+      }
+      
       // 1. 먼저 명시적으로 AuthLoading 상태 전환
       emit(AuthLoading());
       
-      // 2. AppRouter의 사용자 정보를 삭제하기 전에 현재 사용자의 복사본 저장
-      final currentUserCopy = _currentUser;
-      
-      // 3. AppRouter의 사용자 정보 삭제 - 이후 리디렉션이 발생함
-      AppRouter.setCurrentUser(null);
-      
-      // 4. 상태를 미인증 상태로 설정 - UI가 재구성됨
-      emit(AuthUnauthenticated());
-      
-      // 5. 지연 시간 후 Firebase에서 실제 로그아웃 - 비동기 작업 
-      await Future.delayed(const Duration(milliseconds: 300));
-      
-      // 6. 실제 Firebase 로그아웃 수행
+      // 2. 먼저 Firebase Auth에서 로그아웃 수행 (중요: UI 변경 전에 실행)
+      // 이렇게 하면 로그아웃이 실패해도 UI가 일관되게 유지됨
       final result = await _signOut(NoParams());
       
-      // 7. 완료 처리
+      // 로그아웃 결과 확인
+      bool logoutSuccess = false;
       result.fold(
         (failure) {
           debugPrint('Firebase 로그아웃 실패: ${failure.message}');
-          // (이미 UI는 로그아웃 상태로 변경되었으므로 사용자에게 오류를 표시하지 않음)
+          logoutSuccess = false;
         },
         (_) {
-          debugPrint('로그아웃 성공');
-          // 이미 AuthUnauthenticated 상태로 변경됨
+          debugPrint('Firebase 로그아웃 성공');
+          logoutSuccess = true;
         },
       );
       
+      // 3. 성공한 경우에만 AppRouter의 사용자 정보 삭제 및 UI 상태 변경
+      if (logoutSuccess) {
+        // AppRouter의 사용자 정보 삭제 (리디렉션 발생)
+        AppRouter.setCurrentUser(null);
+        
+        // 상태를 미인증 상태로 설정 (UI 재구성)
+        emit(AuthUnauthenticated());
+        debugPrint('로그아웃 완료: UI 및 라우팅 상태 업데이트됨');
+      } else {
+        // 실패한 경우 이전 인증 상태 복원
+        if (state is AuthLoading && _currentUser != null) {
+          emit(AuthAuthenticated(_currentUser!));
+          debugPrint('로그아웃 실패: 이전 인증 상태로 복원됨');
+        } else {
+          // 사용자 정보가 없는 경우 인증되지 않은 상태로 설정
+          emit(AuthUnauthenticated());
+          AppRouter.setCurrentUser(null);
+          debugPrint('로그아웃 실패 처리: 인증되지 않은 상태로 설정');
+        }
+      }
     } catch (e) {
       debugPrint('로그아웃 중 예외 발생: $e');
-      // 오류가 발생해도 사용자 UI는 이미 로그아웃 상태로 변경됨
+      // 심각한 오류 발생 시 인증되지 않은 상태로 강제 전환
+      // (일관성 있는 상태 유지를 위해)
       emit(AuthUnauthenticated());
+      AppRouter.setCurrentUser(null);
     }
   }
   

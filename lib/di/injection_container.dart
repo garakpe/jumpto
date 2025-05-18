@@ -28,7 +28,7 @@ import '../features/auth/domain/usecases/get_students_by_teacher.dart';
 import '../features/auth/domain/usecases/register_teacher.dart';
 import '../features/auth/domain/usecases/sign_in_student.dart';
 import '../features/auth/domain/usecases/sign_in_with_email_password.dart';
-import '../features/auth/domain/usecases/login_with_email_password.dart';
+// login_with_email_password.dart 제거됨
 import '../features/auth/domain/usecases/sign_out.dart';
 import '../features/auth/domain/usecases/update_student_gender.dart';
 import '../features/auth/domain/usecases/upload_students.dart';
@@ -96,7 +96,7 @@ Future<void> init() async {
   
   // Use Cases
   sl.registerLazySingleton(() => SignInWithEmailPassword(sl()));
-  sl.registerLazySingleton(() => LoginWithEmailPassword(sl()));
+  // LoginWithEmailPassword 유스케이스 제거 (중복)
   sl.registerLazySingleton(() => SignInStudent(sl()));
   sl.registerLazySingleton(() => GetCurrentUser(sl()));
   sl.registerLazySingleton(() => RegisterTeacher(sl()));
