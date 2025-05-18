@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -78,7 +79,8 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
               padding: const EdgeInsets.all(24.0),
               child: Form(
                 key: _formKey,
-                child: Column(
+                child: AutofillGroup(
+                  child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -107,6 +109,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                       label: '관리자 아이디',
                       hintText: '관리자 아이디를 입력하세요',
                       prefixIcon: const Icon(Icons.person),
+                      autofillHints: const [AutofillHints.username],
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return '관리자 아이디를 입력하세요';
@@ -123,6 +126,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                       hintText: '비밀번호를 입력하세요',
                       prefixIcon: const Icon(Icons.lock),
                       obscureText: true,
+                      autofillHints: const [AutofillHints.password],
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return '비밀번호를 입력하세요';
@@ -149,6 +153,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                 ),
               ),
             ),
+            ),
           );
         },
       ),
@@ -164,6 +169,8 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
         _usernameController.text.trim(),
         _passwordController.text,
       );
+      // 자동완성 컨텍스트 완료
+      TextInput.finishAutofillContext();
     }
   }
 }

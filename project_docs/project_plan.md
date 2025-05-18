@@ -333,6 +333,16 @@
   - 앱 활성화 이벤트 중복 처리 방지 ✅
   - 최소 활성화 간격 설정 (5초) ✅
 
+### 최근 완료된 작업 (DOM 오류 수정) ✅
+
+- 로그인 페이지 DOM 오류 해결 ✅
+  - 비밀번호 필드가 HTML `<form>` 태그로 감싸여 있지 않을 때 발생하는 오류 해결 ✅
+  - `AppTextField` 위젯에 `autofillHints` 파라미터 추가 ✅
+  - 로그인 페이지에 `AutofillGroup` 적용 ✅
+  - 입력 필드에 적절한 `autofillHints` 설정 ✅
+  - `TextInput.finishAutofillContext()` 호출 추가 ✅
+  - 학생 로그인, 관리자 로그인, 학생 회원가입 페이지 모두 같은 문제 해결 ✅
+
 ### 다음 예정 작업
 
 - Cloud Functions 배포 및 테스트
@@ -373,6 +383,7 @@
 ### 발생한 문제점
 
 - 학교 선택기에서 학교 선택 후 텍스트 필드에 학교 이름이 표시되지 않는 문제 ✅
+- 로그인 페이지에서 DOM 오류 발생: "Password field is not contained in a form" ✅
 
 - 앱 실행 시 사용자 데이터 시드 설정 필요 ✅
 - 자동 코드 생성 대신 직접 변환 로직 구현 필요 (Freezed, JsonSerializable 사용시 오류)

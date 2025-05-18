@@ -17,6 +17,7 @@ class AppTextField extends StatelessWidget {
   final int? minLines;
   final bool readOnly;
   final VoidCallback? onTap;
+  final Iterable<String>? autofillHints;
   
   const AppTextField({
     super.key,
@@ -34,6 +35,7 @@ class AppTextField extends StatelessWidget {
     this.minLines,
     this.readOnly = false,
     this.onTap,
+    this.autofillHints,
   });
 
   @override
@@ -59,6 +61,7 @@ class AppTextField extends StatelessWidget {
           minLines: minLines,
           readOnly: readOnly,
           onTap: onTap,
+          autofillHints: autofillHints,
           decoration: InputDecoration(
             hintText: hintText,
             prefixIcon: prefixIcon,

@@ -82,13 +82,15 @@ class _RegisterPageState extends State<RegisterPage> {
                     // 회원가입 폼
                     Form(
                       key: _formKey,
-                      child: Column(
+                      child: AutofillGroup(
+                        child: Column(
                         children: [
                           AppTextField(
                             label: '이름',
                             hintText: '이름을 입력하세요',
                             controller: _nameController,
                             prefixIcon: const Icon(Icons.person),
+                            autofillHints: const [AutofillHints.name],
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return '이름을 입력해주세요';
@@ -125,6 +127,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
                             prefixIcon: const Icon(Icons.email),
+                            autofillHints: const [AutofillHints.email],
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return '이메일을 입력해주세요';
@@ -146,6 +149,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             controller: _phoneController,
                             keyboardType: TextInputType.phone,
                             prefixIcon: const Icon(Icons.phone),
+                            autofillHints: const [AutofillHints.telephoneNumber],
                             inputFormatters: [
                               FilteringTextInputFormatter.digitsOnly,
                               LengthLimitingTextInputFormatter(11),
@@ -170,6 +174,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             controller: _passwordController,
                             obscureText: true,
                             prefixIcon: const Icon(Icons.lock),
+                            autofillHints: const [AutofillHints.newPassword],
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return '비밀번호를 입력해주세요';
@@ -204,6 +209,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             controller: _confirmPasswordController,
                             obscureText: true,
                             prefixIcon: const Icon(Icons.lock_outline),
+                            autofillHints: const [AutofillHints.newPassword],
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return '비밀번호를 다시 입력해주세요';
@@ -247,6 +253,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         ],
                       ),
                     ),
+                  ),
 
                     // 로그인 화면으로 돌아가기
                     const SizedBox(height: 16),
@@ -303,6 +310,9 @@ class _RegisterPageState extends State<RegisterPage> {
         schoolName: schoolName,
         phoneNumber: phoneNumber,
       );
+      
+      // 자동완성 컨텍스트 완료
+      TextInput.finishAutofillContext();
     }
   }
 }

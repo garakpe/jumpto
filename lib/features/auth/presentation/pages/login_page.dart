@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -114,10 +115,11 @@ class _LoginPageState extends State<LoginPage> {
                     // 로그인 폼
                     Form(
                       key: _formKey,
-                      child:
-                          _isTeacherLogin
-                              ? _buildTeacherLoginForm()
-                              : _buildStudentLoginForm(),
+                      child: AutofillGroup(
+                        child: _isTeacherLogin
+                            ? _buildTeacherLoginForm()
+                            : _buildStudentLoginForm(),
+                      ),
                     ),
 
                     // 회원가입 안내
@@ -154,6 +156,7 @@ class _LoginPageState extends State<LoginPage> {
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
           prefixIcon: const Icon(Icons.email),
+          autofillHints: const [AutofillHints.email],
           validator: (value) {
             if (value == null || value.isEmpty) {
               return '이메일을 입력해주세요';
@@ -171,6 +174,7 @@ class _LoginPageState extends State<LoginPage> {
           controller: _passwordController,
           obscureText: true,
           prefixIcon: const Icon(Icons.lock),
+          autofillHints: const [AutofillHints.password],
           validator: (value) {
             if (value == null || value.isEmpty) {
               return '비밀번호를 입력해주세요';
@@ -193,6 +197,7 @@ class _LoginPageState extends State<LoginPage> {
           hintText: '학교 이름을 입력하세요',
           controller: _schoolNameController,
           prefixIcon: const Icon(Icons.school),
+          autofillHints: const [AutofillHints.organizationName],
           validator: (value) {
             if (value == null || value.isEmpty) {
               return '학교명을 입력해주세요';
@@ -207,6 +212,7 @@ class _LoginPageState extends State<LoginPage> {
           controller: _studentIdController,
           keyboardType: TextInputType.number,
           prefixIcon: const Icon(Icons.person),
+          autofillHints: const [AutofillHints.username],
           validator: (value) {
             if (value == null || value.isEmpty) {
               return '학번을 입력해주세요';
@@ -241,6 +247,8 @@ class _LoginPageState extends State<LoginPage> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+      // 자동완성 컨텍스트 완료
+      TextInput.finishAutofillContext();
     }
   }
 
@@ -252,6 +260,8 @@ class _LoginPageState extends State<LoginPage> {
         studentId: _studentIdController.text.trim(),
         password: _passwordController.text,
       );
+      // 자동완성 컨텍스트 완료
+      TextInput.finishAutofillContext();
     }
   }
 }
