@@ -125,11 +125,13 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         // Students 데이터에서 User 객체로 변환
         return domain.User(
           id: uid,
+          authUid: uid,
           email: studentData['email'],
           displayName: studentData['name'],
           role: domain.UserRole.student,
           schoolCode: studentData['schoolCode'],
           schoolName: studentData['schoolName'],
+          grade: studentData['grade'],
           classNum: studentData['classNum'],
           studentNum: studentData['studentNum'],
           studentId: studentData['studentId'],
@@ -138,21 +140,29 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       }
 
       // 사용자 데이터 파싱
-      final role =
-          userData['role'] == 'teacher'
-              ? domain.UserRole.teacher
-              : domain.UserRole.student;
+      final roleStr = userData['role'] as String? ?? 'student';
+      domain.UserRole role;
+      
+      if (roleStr == 'admin') {
+        role = domain.UserRole.admin;
+      } else if (roleStr == 'teacher') {
+        role = domain.UserRole.teacher;
+      } else {
+        role = domain.UserRole.student;
+      }
 
       // isApproved 필드 추가
       final bool isApproved = userData['isApproved'] == true;
 
       return domain.User(
         id: uid,
+        authUid: uid,
         email: userData['email'],
         displayName: userData['displayName'],
         role: role,
         schoolCode: userData['schoolCode'],
         schoolName: userData['schoolName'],
+        grade: userData['grade'],
         classNum: userData['classNum'],
         studentNum: userData['studentNum'],
         studentId: userData['studentId'],
@@ -241,6 +251,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       // 사용자 데이터 반환
       return domain.User(
         id: uid,
+        authUid: uid,
         email: email,
         displayName: displayName,
         role: domain.UserRole.teacher,
@@ -255,9 +266,6 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     }
   }
 
-  /// AuthRemoteDataSourceImpl 클래스 내부에 구현될 createStudentAccount 메서드
-  ///
-  /// 이 코드를 AuthRemoteDataSourceImpl 클래스 내부로 복사/붙여넣기하세요.
   @override
   Future<domain.User> createStudentAccount({
     required String displayName,
@@ -367,6 +375,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       // 사용자 데이터 반환
       return domain.User(
         id: uid,
+        authUid: uid,
         email: studentEmail,
         displayName: displayName,
         role: domain.UserRole.student,

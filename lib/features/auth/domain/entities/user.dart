@@ -19,6 +19,9 @@ class User {
   /// 사용자 ID
   final String id;
 
+  /// Firebase Auth UID (인증 시스템 ID)
+  final String? authUid;
+
   /// 이메일
   final String? email;
 
@@ -58,6 +61,7 @@ class User {
   /// 생성자
   User({
     required this.id,
+    this.authUid,
     this.email,
     required this.displayName,
     required this.role,
@@ -70,7 +74,6 @@ class User {
     this.gender,
     this.phoneNumber,
     this.isApproved = false,
-    required authUid,
   });
 
   /// 익명 사용자 여부

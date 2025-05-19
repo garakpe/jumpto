@@ -5,6 +5,7 @@ import '../../../../core/error/exceptions.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/user.dart' as domain;
+import '../../domain/entities/student.dart';
 
 /// 학생 계정 생성 함수 - 개선된 버전
 /// 
@@ -63,17 +64,26 @@ Future<domain.User> createStudentAccount({
 
     // Cloud Functions를 통해 학생 계정 생성
     try {
-      final students = [{
-        'grade': formattedGrade,
-        'classNum': formattedClassNum,
-        'studentNum': formattedStudentNum,
-        'name': displayName,
-        'gender': gender,
-      }];
+      // Student 엔티티 생성
+      final studentsList = [
+        Student(
+          id: '', // 새로 생성될 ID
+          name: displayName,
+          grade: formattedGrade,
+          classNum: formattedClassNum,
+          studentNum: formattedStudentNum,
+          studentId: studentId,
+          teacherId: teacherId,
+          schoolCode: schoolCode,
+          schoolName: schoolName,
+          gender: gender,
+          createdAt: DateTime.now(),
+        )
+      ];
       
       // Cloud Functions를 호출하여 학생 계정 생성
       final result = await cloudFunctionsService.createBulkStudentAccounts(
-        students: students,
+        students: studentsList,
         schoolCode: schoolCode,
         schoolName: schoolName,
         initialPassword: password,
