@@ -99,7 +99,8 @@ class CloudFunctionsService {
   /// 학생 로그인 이메일 가져오기
   ///
   /// 학생이 학교명과 학번으로 로그인 이메일을 가져올 때 사용
-  /// 리팩토링: 에러 처리 강화 및 성능 최적화
+  /// 이메일 형식 및 처리 로직을 서버에서 중앙 관리하여 일관성 보장
+  /// 이메일 형식: ((연도 두자리)(학번)@school(학교코드 뒤 4자리).com)
   Future<String> getStudentLoginEmail({
     required String schoolName,
     required String studentId,

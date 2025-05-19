@@ -311,11 +311,13 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       // 비밀번호 설정 (기본값: 123456)
       final password = initialPassword ?? '123456';
 
-      // 학생 이메일 형식: "(연도 두자리)(학번)@school(학교코드 뒤 4자리).com"
-      // 예: 가락고등학교 3학년 1반 1번 학생, 25년도 → 2530101@school3550.com
-      final DateTime now = DateTime.now();
-      final String currentYearSuffix = now.year.toString().substring(2);
-      final studentEmail = '$currentYearSuffix$studentId@school$schoolCode.com';
+      // 서버에서 이메일 생성 로직을 일원화하기 위해 CloudFunctionsService를 통해 이메일 조회
+      // 이메일 형식: ((연도 두자리)(학번)@school(학교코드 뒤 4자리).com)
+      final studentEmail = await _cloudFunctionsService.getStudentLoginEmail(
+        schoolName: schoolName,
+        studentId: studentId,
+      );
+      debugPrint('서버에서 생성된 학생 이메일: $studentEmail');
 
       // Firebase Auth로 학생 계정 생성
       final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(

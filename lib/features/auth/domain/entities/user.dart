@@ -70,6 +70,7 @@ class User {
     this.gender,
     this.phoneNumber,
     this.isApproved = false,
+    required authUid,
   });
 
   /// 익명 사용자 여부
